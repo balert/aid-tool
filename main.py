@@ -8,6 +8,6 @@ from aid import AID
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='aid.log', level=logging.DEBUG)
 
-aid = AID(config_url, config_user, config_pw)
-aid.get_flightlog()
-print(aid.flightlog)
+# aid = AID(config_url, config_user, config_pw)
+# aid.get_flightlog()
+# print(aid.flightlog)

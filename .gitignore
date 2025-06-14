@@ -3,3 +3,6 @@ config.py
 venv/
 *.log
 __pycache__/
+*.db
+sampledata.txt
+*.dat

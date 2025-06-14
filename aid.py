@@ -53,11 +53,10 @@ class AID():
         self.cookies = r.cookies.get_dict()
         self.save_session()
 
-    def get_flightlog(self):
-        since = "2024-11-01"
-        until = "2024-11-07"
-        flightlog="%s/mydata/flightlog_exec.php?_since_date=%s&_until_date=%s" % (self.base_url, since, until) 
-        r = requests.get(flightlog, cookies=self.cookies)
+    def get_flightlog(self, since, until):
+        req_url="%s/mydata/flightlog_exec.php?_since_date=%s&_until_date=%s" % (self.base_url, since, until) 
+        r = requests.get(req_url, cookies=self.cookies)
         assert(r.status_code == 200)
-        print(r.text)
-        self.flightlog = json.loads(r.text)
+        ret = json.loads(r.text)
+        return ret
+        

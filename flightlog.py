@@ -17,7 +17,7 @@ class FlightLog():
             
             flightids = [f['flightid'] for f in self.data]
             if flight['flightid'] in flightids:
-                print("Skipping %s because already exists in data." % flight['flightid'])
+                # print("Skipping %s because already exists in data." % flight['flightid'])
                 continue
             self.data.append(flight)
         self.write()

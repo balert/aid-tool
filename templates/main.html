@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <title>FlightLog</title>
+    <style>
+        .grid {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .left-column {
+            flex: 2;
+            /* 2 Teile */
+        }
+
+        .right-column {
+            flex: 1;
+            /* 1 Teil */
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 5px;
+        }
+        th {
+            font-weight: bold;
+        }
+        td, th {
+            white-space: nowrap;
+            font-size: small;
+            padding: 1px; 
+        }
+        table, td, th, div, img {
+            border: 0px solid red;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <div class="grid">
+            <section class="left-column">
+                <h1>FlightLog</h1>
+
+                <a href="/refresh">Refresh &#x1F501;</a>
+                <table>
+                    <tr>
+                        <th>ID</th>
+                        <th>Departure</th>
+                        <th>Destination</th>
+                        <th>Date</th>
+                        <th>Aircraft</th>
+                        <th>Callsign</th>
+                        <th>Blocktime</th>
+                        <th>Airtime</th>
+                    </tr>
+                    {% for flight in data %}
+                    <tr>
+                        <td><a href="/flight/{{ flight.flightid }}">{{ flight.flightid }}</a></td>
+                        <td>{{ flight.departure }}</td>
+                        <td>{{ flight.destination }}</td>
+                        <td>{{ flight.flightdate["display"] }}</td>
+                        <td>{{ flight.actype }}</td>
+                        <td>{{ flight.callsign }}</td>
+                        <td>{{ flight.blocktime }}</td>
+                        <td>{{ flight.airtime }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </section>
+            <section class="right-column">
+                <h2>Bild</h2>
+                <img src="/graph" alt="Beispielbild" style="max-width: 100%; height: auto;">
+                <img src="/graph" alt="Beispielbild" style="max-width: 100%; height: auto;">
+                <img src="/graph" alt="Beispielbild" style="max-width: 100%; height: auto;">
+            </section>
+        </div>
+    </main>
+</body>
+
+</html>

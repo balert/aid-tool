@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import logging, re, json, os
 import datetime
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
+import matplotlib.pyplot as plt
+import io
 
 from config import *
 from aid import AID
@@ -60,5 +65,40 @@ def merge_data():
     merged.sort()
     notes.write()
 
-# refresh_data()
-display_data()
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/")
+async def root(request: Request):
+    flightlog = FlightLog("merged")
+    data = flightlog.get()
+    data.reverse()
+    return templates.TemplateResponse(
+        request=request, name="main.html", context={"data": data}
+    )
+
+@app.get("/flight/{flight_id}")
+async def get_flight(request: Request, flight_id: int):
+    return "flight %s " %flight_id
+
+@app.get("/refresh")
+async def root(request: Request):
+    print("refresh")
+    refresh_data()
+    return RedirectResponse(url="/")
+
+@app.get("/graph")
+async def get_graph(request: Request):
+    # Beispiel-Diagramm erstellen
+    plt.figure()
+    plt.plot([1, 2, 3, 4], [10, 20, 25, 30])
+    plt.title("Testgraph")
+
+    # Diagramm in BytesIO-Puffer schreiben
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close()  # Speicher freigeben
+    buf.seek(0)  # Anfang des Puffers setzen
+
+    # Antwort mit Bildinhalt zurückgeben
+    return Response(content=buf.read(), media_type="image/png")

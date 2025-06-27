@@ -12,8 +12,13 @@ from aid import AID
 from flightlog import FlightLog
 from notes import Notes
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()] 
+)
+
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename='aid.log', level=logging.DEBUG)
 
 notesfilename = "flightlog_merged_notes.dat"
 
@@ -57,7 +62,7 @@ def merge_data():
     merged = FlightLog('merged')
     for tenant in tenants:
         flightlog = FlightLog(tenant['name'])
-        data = flightlog.get()
+        data = flightlog.get_all()
         for flight in data:
             flight['tenant'] = tenant['name']
             notes.insert(flight_notesId(flight))
@@ -71,15 +76,38 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/")
 async def root(request: Request):
     flightlog = FlightLog("merged")
-    data = flightlog.get()
-    data.reverse()
+    data = flightlog.get_all()
+    # data.reverse()
+
+    stat = {}
+
+    blocktime = flightlog.get_blocktime()
+    total_minutes = int(blocktime.total_seconds() // 60)
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+    stat["blocktime"] = f"{hours:02d}:{minutes:02d}"
+    
+    airtime = flightlog.get_airtime()
+    total_minutes = int(airtime.total_seconds() // 60)
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+    stat["airtime"] = f"{hours:02d}:{minutes:02d}"
+    
+    stat["landings"] = f"{flightlog.get_landings()}"
+    
     return templates.TemplateResponse(
-        request=request, name="main.html", context={"data": data}
+        request=request, name="main.html", context={"data": data, "statistics": stat}
     )
 
 @app.get("/flight/{flight_id}")
 async def get_flight(request: Request, flight_id: int):
-    return "flight %s " %flight_id
+    flightlog = FlightLog("merged")
+    flightdata = flightlog.get_flight(flight_id)
+    for k,v in flightdata.items():
+        logger.info(f"{k}: {v}")
+    return templates.TemplateResponse(
+        request=request, name="flight.html", context={"flight": flightdata}
+    )
 
 @app.get("/refresh")
 async def root(request: Request):

@@ -6,6 +6,8 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 import matplotlib.pyplot as plt
 import io
+from collections import defaultdict
+import pandas
 
 from config import *
 from aid import AID
@@ -69,31 +71,38 @@ def merge_data():
         merged.store(data)
     merged.sort()
     notes.write()
+    
+def timedelta_toString(delta : datetime.timedelta) -> str:
+    total_minutes = int(delta.total_seconds() // 60)
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+    return f"{hours:02d}:{minutes:02d}"
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
 async def root(request: Request):
-    flightlog = FlightLog("merged")
+    flightlog = FlightLog()
     data = flightlog.get_all()
-    # data.reverse()
+    data.reverse()
 
     stat = {}
-
-    blocktime = flightlog.get_blocktime()
-    total_minutes = int(blocktime.total_seconds() // 60)
-    hours = total_minutes // 60
-    minutes = total_minutes % 60
-    stat["blocktime"] = f"{hours:02d}:{minutes:02d}"
-    
-    airtime = flightlog.get_airtime()
-    total_minutes = int(airtime.total_seconds() // 60)
-    hours = total_minutes // 60
-    minutes = total_minutes % 60
-    stat["airtime"] = f"{hours:02d}:{minutes:02d}"
-    
+    stat["blocktime"] = timedelta_toString(flightlog.get_blocktime())
+    stat["airtime"] = timedelta_toString(flightlog.get_airtime())
     stat["landings"] = f"{flightlog.get_landings()}"
+    stat["aircraft"] = ", ".join(flightlog.get_aircraft_types())
+    
+    grouped = flightlog.get_flights_groupedby_month()
+    blocktimes = defaultdict(datetime.timedelta)
+    for k,v in grouped.items():
+        time = datetime.timedelta(0)
+        for flight in v:
+            blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+            delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
+            time += delta
+        blocktimes[k] = time
+    stat["avg_blocktime_month"] = round(pandas.Series(blocktimes.values()).mean().total_seconds()/3600,1)
     
     return templates.TemplateResponse(
         request=request, name="main.html", context={"data": data, "statistics": stat}
@@ -101,7 +110,7 @@ async def root(request: Request):
 
 @app.get("/flight/{flight_id}")
 async def get_flight(request: Request, flight_id: int):
-    flightlog = FlightLog("merged")
+    flightlog = FlightLog()
     flightdata = flightlog.get_flight(flight_id)
     for k,v in flightdata.items():
         logger.info(f"{k}: {v}")
@@ -115,18 +124,36 @@ async def root(request: Request):
     refresh_data()
     return RedirectResponse(url="/")
 
-@app.get("/graph")
-async def get_graph(request: Request):
-    # Beispiel-Diagramm erstellen
-    plt.figure()
-    plt.plot([1, 2, 3, 4], [10, 20, 25, 30])
-    plt.title("Testgraph")
+@app.get("/graph/blocktimes")
+async def get_graph_blocktimes(request: Request, aircraft : str = None):
+    flightlog = FlightLog()
+    grouped = flightlog.get_flights_groupedby_month(aircraft)
+    
+    # accumulate blocktimes
+    blocktimes = defaultdict(datetime.timedelta)
+    for k,v in grouped.items():
+        time = datetime.timedelta(0)
+        for flight in v:
+            blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+            delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
+            time += delta
+        blocktimes[k] = time
+    
+    # prepare keys and values
+    dates = [f"{year}-{month:02d}" for (year, month) in blocktimes.keys()]
+    values = [x.total_seconds()/3600 for x in blocktimes.values()]
+  
+    # generate graph
+    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+    ax.bar(dates, values)
+    plt.xticks(rotation=90)
+    plt.title(f"Blocktimes {aircraft}" if aircraft else "Blocktimes")
+    plt.tight_layout(pad=2)
 
-    # Diagramm in BytesIO-Puffer schreiben
+    # write graph to buffer and return 
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
-    plt.close()  # Speicher freigeben
-    buf.seek(0)  # Anfang des Puffers setzen
+    plt.close() 
+    buf.seek(0) 
 
-    # Antwort mit Bildinhalt zurückgeben
     return Response(content=buf.read(), media_type="image/png")

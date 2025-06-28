@@ -19,7 +19,7 @@
         }
 
         .right-column {
-            flex: 1;
+            flex: 2;
             /* 1 Teil */
         }
 
@@ -79,13 +79,13 @@
                 <h2>Statistics</h2>
                 <ul>
                     <li>Blocktime: {{ statistics["blocktime"] }}h</li>
+                    <li>Avg. month blocktime: {{ statistics["avg_blocktime_month"] }}h</li>
                     <li>Airtime: {{ statistics["airtime"] }}h</li>
                     <li>Landings: {{ statistics["landings"] }}</li>
+                    <li>Aircraft: {{ statistics["aircraft"] }}</li>
                 </ul>
-                <h2>Bild</h2>
-                <img src="/graph" alt="Beispielbild" style="max-width: 100%; height: auto;">
-                <img src="/graph" alt="Beispielbild" style="max-width: 100%; height: auto;">
-                <img src="/graph" alt="Beispielbild" style="max-width: 100%; height: auto;">
+                <img src="/graph/blocktimes" style="max-width: 100%; height: auto;">
+                <img src="/graph/blocktimes?aircraft=Aquila" style="max-width: 100%; height: auto;">
             </section>
         </div>
     </main>

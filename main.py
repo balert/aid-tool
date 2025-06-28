@@ -93,6 +93,7 @@ async def root(request: Request):
     stat["landings"] = f"{flightlog.get_landings()}"
     stat["aircraft"] = ", ".join(flightlog.get_aircraft_types())
     
+    # average blocktime
     grouped = flightlog.get_flights_groupedby_month()
     blocktimes = defaultdict(datetime.timedelta)
     for k,v in grouped.items():

@@ -14,13 +14,11 @@
         }
 
         .left-column {
-            flex: 2;
-            /* 2 Teile */
+            flex: 3;
         }
 
         .right-column {
-            flex: 2;
-            /* 1 Teil */
+            flex: 1;
         }
 
         img {
@@ -34,7 +32,7 @@
         }
         td, th, li {
             white-space: nowrap;
-            font-size: small;
+            font-size:medium;
             padding: 1px; 
         }
         table, td, th, div, img {
@@ -44,7 +42,7 @@
 </head>
 
 <body>
-    <main class="container">
+    <main class="container-fluid">
         <div class="grid">
             <section class="left-column">
                 <h1>FlightLog</h1>
@@ -60,6 +58,12 @@
                         <th>Callsign</th>
                         <th>Blocktime</th>
                         <th>Airtime</th>
+                        <th>takeoff</th>
+                        <th>landing</th>
+                        <th>blockoff</th>
+                        <th>blockon</th>
+                        <th>landings</th>
+                        <th>crew</th>
                     </tr>
                     {% for flight in data %}
                     <tr>
@@ -71,6 +75,12 @@
                         <td>{{ flight.callsign }}</td>
                         <td>{{ flight.blocktime }}</td>
                         <td>{{ flight.airtime }}</td>
+                        <td>{{ flight.takeoff }}</td>
+                        <td>{{ flight.landing }}</td>
+                        <td>{{ flight.blockoff }}</td>
+                        <td>{{ flight.blockon }}</td>
+                        <td>{{ flight.landings }}</td>
+                        <td>{{ flight.crew | striptags }}</td>
                     </tr>
                     {% endfor %}
                 </table>

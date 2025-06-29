@@ -94,7 +94,7 @@ async def root(request: Request):
     stat["aircraft"] = ", ".join(flightlog.get_aircraft_types())
     
     # average blocktime
-    grouped = flightlog.get_flights_groupedby_month()
+    _, grouped = flightlog.get_flights_groupedby_month()
     blocktimes = defaultdict(datetime.timedelta)
     for k,v in grouped.items():
         time = datetime.timedelta(0)
@@ -125,10 +125,51 @@ async def root(request: Request):
     refresh_data()
     return RedirectResponse(url="/")
 
+@app.get("/graph/blocktimes_stacked")
+async def get_graph_blocktimes(request: Request):
+    flightlog = FlightLog()
+    aircrafts = flightlog.get_aircraft_types()
+    (all_months, grouped) = flightlog.get_flights_groupedby_month()
+    
+    data = dict()
+    for ac in sorted(aircrafts): 
+        data[ac] = list()
+        for month in all_months:
+            time = datetime.timedelta(0)
+            for flight in grouped[month.year,month.month]:
+                if flight["actype"] == ac:
+                    blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+                    delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
+                    time += delta
+            data[ac].append(time.total_seconds()/3600)
+    
+    # generate graph
+    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+    
+    bottom = [0] * len(data[list(aircrafts)[0]])
+    for x, aircraft in enumerate(aircrafts):
+        logger.info(len(bottom))
+        ax.bar([f"{x.year}-{x.month}" for x in all_months], data[aircraft], bottom=bottom, label=aircraft)
+        bottom = [a + b for a, b in zip(bottom, data[aircraft])]
+        
+    plt.xticks(rotation=90)
+    plt.ylim(0,10)
+    plt.title("Blocktimes (Stacked)")
+    plt.legend()
+    plt.tight_layout(pad=2)
+
+    # write graph to buffer and return 
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close() 
+    buf.seek(0) 
+
+    return Response(content=buf.read(), media_type="image/png")
+
 @app.get("/graph/blocktimes")
 async def get_graph_blocktimes(request: Request, aircraft : str = None):
     flightlog = FlightLog()
-    grouped = flightlog.get_flights_groupedby_month(aircraft)
+    (_, grouped) = flightlog.get_flights_groupedby_month(aircraft)
     
     # accumulate blocktimes
     blocktimes = defaultdict(datetime.timedelta)

@@ -91,7 +91,7 @@ class FlightLog():
         for month in all_months:
             len(grouped[month.year,month.month])
             
-        return dict(sorted(grouped.items()))
+        return (all_months, dict(sorted(grouped.items())))
     
     def get_aircraft_types(self):
         aircraft = set()

@@ -51,36 +51,40 @@
                 <table>
                     <tr>
                         <th>ID</th>
-                        <th>Departure</th>
-                        <th>Destination</th>
                         <th>Date</th>
+                        <th>blockoff</th>
+                        <th>Departure</th>
+                        <th>takeoff</th>
                         <th>Aircraft</th>
                         <th>Callsign</th>
-                        <th>Blocktime</th>
                         <th>Airtime</th>
-                        <th>takeoff</th>
                         <th>landing</th>
-                        <th>blockoff</th>
-                        <th>blockon</th>
                         <th>landings</th>
+                        <th>Destination</th>
+                        <th>blockon</th>
+                        <th>Blocktime</th>
+                        <th>pic</th>
                         <th>crew</th>
+                        <td>pricecat</td>
                     </tr>
                     {% for flight in data %}
                     <tr>
-                        <td><a href="/flight/{{ flight.flightid }}">{{ flight.flightid }}</a></td>
+                        <td><a href="/flight/{{ flight.flightid }}">{{ flight.tenant[:3] }} {{ flight.flightid }}</a></td>
+                        <td>{{ flight.date.strftime('%d.%m.%Y') }}</td>
+                        <td>{{ flight.blockoff }}</td>
                         <td>{{ flight.departure }}</td>
-                        <td>{{ flight.destination }}</td>
-                        <td>{{ flight.flightdate["display"] }}</td>
+                        <td>{{ flight.takeoff }}</td>
                         <td>{{ flight.actype }}</td>
                         <td>{{ flight.callsign }}</td>
-                        <td>{{ flight.blocktime }}</td>
                         <td>{{ flight.airtime }}</td>
-                        <td>{{ flight.takeoff }}</td>
                         <td>{{ flight.landing }}</td>
-                        <td>{{ flight.blockoff }}</td>
-                        <td>{{ flight.blockon }}</td>
                         <td>{{ flight.landings }}</td>
-                        <td>{{ flight.crew | striptags }}</td>
+                        <td>{{ flight.destination }}</td>
+                        <td>{{ flight.blockon }}</td>
+                        <td>{{ flight.blocktime }}</td>
+                        <td>{{ "&#x1F7E2;" | safe if flight.pic else "&#x1F534;" | safe }}</td>
+                        <td>{{ flight.crew | safe }}</td>
+                        <td>{{ flight.pricecat }}</td>
                     </tr>
                     {% endfor %}
                 </table>
@@ -90,13 +94,17 @@
                 <ul>
                     <li>Blocktime: {{ statistics["blocktime"] }}h</li>
                     <li>Avg. month blocktime: {{ statistics["avg_blocktime_month"] }}h</li>
+                    <li>Blocktime (PIC): {{ statistics["blocktime_pic"] }}h</li>
+                    <li>Blocktime (Dual): {{ statistics["blocktime_dual"] }}h</li>
                     <li>Airtime: {{ statistics["airtime"] }}h</li>
                     <li>Landings: {{ statistics["landings"] }}</li>
                     <li>Aircraft: {{ statistics["aircraft"] }}</li>
                 </ul>
-                <img src="/graph/blocktimes" style="max-width: 100%; height: auto;">
-                <img src="/graph/blocktimes_stacked" style="max-width: 100%; height: auto;">
-
+                <!-- <img src="/graph/blocktimes" style="max-width: 100%; height: auto;"> -->
+                <img src="/graph/bt_ac" style="max-width: 100%; height: auto;">
+                <img src="/graph/bt_cs" style="max-width: 100%; height: auto;">
+                <!-- <img src="/graph/bt_ac?pic=1" style="max-width: 100%; height: auto;"> -->
+                <!-- <img src="/graph/bt_ac?pic=1" style="max-width: 100%; height: auto;"> -->
             </section>
         </div>
     </main>

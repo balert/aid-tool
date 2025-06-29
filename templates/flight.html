@@ -1,5 +1,42 @@
-<table>
-{% for key, value in flight.items() %}
-  <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
-{% endfor %}
-</table>
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <title>FlightLog</title>
+  <style>
+    th {
+      font-weight: bold;
+    }
+
+    td,
+    th,
+    li {
+      white-space: nowrap;
+      font-size: medium;
+      padding: 1px;
+    }
+
+    table,
+    td,
+    th,
+    div,
+    img {
+      border: 0px solid red;
+    }
+  </style>
+</head>
+
+<body>
+  <table>
+    {% for key, value in flight.items() %}
+    <tr>
+      <td>{{ key }}</td>
+      <td>{{ value }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>

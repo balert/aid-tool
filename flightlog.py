@@ -12,7 +12,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class FlightLog():
-    data = []
+    acc_blocktime = None 
+    acc_blocktime_pic = None 
+    acc_airtime = None 
+    landings = None
     
     def __init__(self, tenant=None):
         if not tenant:
@@ -21,6 +24,18 @@ class FlightLog():
         if os.path.exists(self.filename):
             with open(self.filename, "r") as f:
                 self.data = json.loads(f.read())
+                self.process()
+    
+    def process(self):
+        self.flights = []
+        for flight in self.data:
+            flight["pic"] = self.is_pic(flight)
+            flight["date"] = datetime.datetime.fromtimestamp(flight["flightdate"]["sortval"])
+            flight["year"] = flight["date"].year
+            flight["month"] = flight["date"].month
+            self.flights.append(flight)
+        self.min = min(self.flights, key=lambda x: x["flightdate"]["sortval"])
+        self.max = max(self.flights, key=lambda x: x["flightdate"]["sortval"])
     
     def store(self, data):
         for flight in data:
@@ -36,11 +51,11 @@ class FlightLog():
         self.write()
     
     def get_flight(self, flight_id: int):
-        flight = next((f for f in self.data if int(f["flightid"]) == flight_id), None)
+        flight = next((f for f in self.flights if int(f["flightid"]) == flight_id), None)
         return flight
     
     def get_all(self):
-        return self.data
+        return self.flights
     
     def sort(self):
         self.data.sort(key=lambda x: x['flightdate']['sortval'])
@@ -51,43 +66,78 @@ class FlightLog():
             f.write(json.dumps(self.data))
 
     def get_blocktime(self) -> datetime.timedelta: 
-        acc_time = datetime.timedelta(0)
-        for flight in self.data:
-            blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
-            delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
-            acc_time += delta
-        return acc_time
+        if not self.acc_blocktime:
+            self.acc_blocktime = datetime.timedelta(0)
+            for flight in self.flights:
+                blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+                delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
+                self.acc_blocktime += delta
+        return self.acc_blocktime
+    
+    def get_blocktime_pic(self) -> datetime.timedelta: 
+        if not self.acc_blocktime_pic:
+            self.acc_blocktime_pic = datetime.timedelta(0)
+            for flight in self.flights:
+                if not self.is_pic(flight):
+                    continue
+                blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+                delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
+                self.acc_blocktime_pic += delta
+        return self.acc_blocktime_pic
 
     def get_airtime(self) -> datetime.timedelta:
-        acc_time = datetime.timedelta(0)
-        for flight in self.data:
-            airtime = datetime.datetime.strptime(flight["airtime"], "%H:%M")
-            delta = datetime.timedelta(hours=airtime.hour, minutes=airtime.minute)
-            acc_time += delta
-        return acc_time
+        if not self.acc_airtime:
+            self.acc_airtime = datetime.timedelta(0)
+            for flight in self.flights:
+                airtime = datetime.datetime.strptime(flight["airtime"], "%H:%M")
+                delta = datetime.timedelta(hours=airtime.hour, minutes=airtime.minute)
+                self.acc_airtime += delta
+        return self.acc_airtime
     
     def get_landings(self) -> int:
-        return sum(int(l["landings"]) for l in self.data)
+        if not self.landings:
+            self.landings = sum(int(l["landings"]) for l in self.flights)
+        return self.landings
     
-    def get_flights_groupedby_month(self, f_aircraft=None):
+    def is_pic(self, flight: dict) -> bool:
+        #TODO: respect tenant ID
+        if flight["flightid"] in [
+            "1668", 
+            "3575", 
+            "5269"
+            ]:
+            # blacklist flight id as non-PIC
+            return False
+        if flight["flightid"] in ["4853", "4854", "4855"]:
+            # whitelist flight id as PIC
+            return True
+        
+        # charter flights are always PIC
+        if not "charter" in flight["pricecat"].lower():
+            crew = flight["crew"]
+            if "<b>Brenner</b>" in crew:
+                return True
+            if "Brenner" == crew:
+                return True
+            return False
+        return True
+    
+    def get_flights_groupedby_month(self, f_aircraft=None, f_pic=False):
         grouped = defaultdict(list)
-        for flight in self.data:
+        for flight in self.flights:
             if f_aircraft and not f_aircraft.lower() in flight["actype"].lower():
                 continue
-            flightdate = datetime.datetime.fromtimestamp(flight["flightdate"]["sortval"])
-            grouped[(flightdate.year, flightdate.month)].append(flight)
+            
+            if f_pic and not flight["pic"]:
+                continue
+            
+            grouped[(flight["year"], flight["month"])].append(flight)
             
         # fill gaps (empty months)
         if len(grouped) <= 0:
             return dict()
         
-        (miny, minm) = min(grouped.keys())
-        (maxy, maxm) = max(grouped.keys())
-       
-        start_date = pandas.to_datetime(f"{miny}-{minm}-01")
-        end_date = pandas.to_datetime(f"{maxy}-{maxm}-01")
-
-        all_months = pandas.date_range(start=start_date, end=end_date, freq='MS').to_period('M')
+        all_months = pandas.date_range(start=self.min["date"].replace(day=1), end=self.max["date"], freq='MS').to_period('M')
         for month in all_months:
             len(grouped[month.year,month.month])
             
@@ -95,7 +145,12 @@ class FlightLog():
     
     def get_aircraft_types(self):
         aircraft = set()
-        for flight in self.data:
+        for flight in self.flights:
             aircraft.add(flight["actype"])
-        return aircraft
+        return sorted(aircraft)
     
+    def get_callsigns(self):
+        aircraft = set()
+        for flight in self.flights:
+            aircraft.add(flight["callsign"])
+        return sorted(aircraft)

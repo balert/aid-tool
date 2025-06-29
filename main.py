@@ -5,9 +5,11 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import io
 from collections import defaultdict
 import pandas
+from typing import Optional
 
 from config import *
 from aid import AID
@@ -23,6 +25,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 notesfilename = "flightlog_merged_notes.dat"
+
+# plt.style.use('Solarize_Light2')
+plt.style.use('fast')
 
 def refresh_data():
     for tenant in tenants:
@@ -89,6 +94,8 @@ async def root(request: Request):
 
     stat = {}
     stat["blocktime"] = timedelta_toString(flightlog.get_blocktime())
+    stat["blocktime_pic"] = timedelta_toString(flightlog.get_blocktime_pic())
+    stat["blocktime_dual"] = timedelta_toString(flightlog.get_blocktime() - flightlog.get_blocktime_pic())
     stat["airtime"] = timedelta_toString(flightlog.get_airtime())
     stat["landings"] = f"{flightlog.get_landings()}"
     stat["aircraft"] = ", ".join(flightlog.get_aircraft_types())
@@ -125,47 +132,6 @@ async def root(request: Request):
     refresh_data()
     return RedirectResponse(url="/")
 
-@app.get("/graph/blocktimes_stacked")
-async def get_graph_blocktimes(request: Request):
-    flightlog = FlightLog()
-    aircrafts = flightlog.get_aircraft_types()
-    (all_months, grouped) = flightlog.get_flights_groupedby_month()
-    
-    data = dict()
-    for ac in sorted(aircrafts): 
-        data[ac] = list()
-        for month in all_months:
-            time = datetime.timedelta(0)
-            for flight in grouped[month.year,month.month]:
-                if flight["actype"] == ac:
-                    blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
-                    delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
-                    time += delta
-            data[ac].append(time.total_seconds()/3600)
-    
-    # generate graph
-    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
-    
-    bottom = [0] * len(data[list(aircrafts)[0]])
-    for x, aircraft in enumerate(aircrafts):
-        logger.info(len(bottom))
-        ax.bar([f"{x.year}-{x.month}" for x in all_months], data[aircraft], bottom=bottom, label=aircraft)
-        bottom = [a + b for a, b in zip(bottom, data[aircraft])]
-        
-    plt.xticks(rotation=90)
-    plt.ylim(0,10)
-    plt.title("Blocktimes (Stacked)")
-    plt.legend()
-    plt.tight_layout(pad=2)
-
-    # write graph to buffer and return 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    plt.close() 
-    buf.seek(0) 
-
-    return Response(content=buf.read(), media_type="image/png")
-
 @app.get("/graph/blocktimes")
 async def get_graph_blocktimes(request: Request, aircraft : str = None):
     flightlog = FlightLog()
@@ -198,4 +164,154 @@ async def get_graph_blocktimes(request: Request, aircraft : str = None):
     plt.close() 
     buf.seek(0) 
 
+    return Response(content=buf.read(), media_type="image/png")
+
+@app.get("/graph/bt_ac")
+async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
+    flightlog = FlightLog()
+    aircrafts = flightlog.get_aircraft_types()
+    (all_months, grouped) = flightlog.get_flights_groupedby_month(f_pic=pic)
+    
+    data = dict()
+    for ac in sorted(aircrafts): 
+        data[ac] = list()
+        for month in all_months:
+            time = datetime.timedelta(0)
+            for flight in grouped[month.year,month.month]:
+                if flight["actype"] == ac:
+                    blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+                    delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
+                    time += delta
+            data[ac].append(time.total_seconds()/3600)
+    
+    # generate graph
+    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+    
+    bottom = [0] * len(data[list(aircrafts)[0]])
+    for x, aircraft in enumerate(aircrafts):
+        ax.bar([f"{x.year}-{x.month}" for x in all_months], data[aircraft], bottom=bottom, label=aircraft)
+        bottom = [a + b for a, b in zip(bottom, data[aircraft])]
+        
+    plt.xticks(rotation=45)
+    plt.ylim(0,10)
+    if not pic:
+        plt.title("Blocktimes by Aircraft Type")
+    else: 
+        plt.title("Blocktimes by Aircraft Type (PIC)")
+    plt.legend()
+
+    # write graph to buffer and return 
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close() 
+    buf.seek(0) 
+
+    return Response(content=buf.read(), media_type="image/png")
+
+@app.get("/graph/bt_cs")
+async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
+    flightlog = FlightLog()
+    aircrafts = flightlog.get_callsigns()
+    (all_months, grouped) = flightlog.get_flights_groupedby_month(f_pic=pic)
+    
+    data = dict()
+    for ac in sorted(aircrafts): 
+        data[ac] = list()
+        for month in all_months:
+            time = datetime.timedelta(0)
+            for flight in grouped[month.year,month.month]:
+                if flight["callsign"] == ac:
+                    blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+                    delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
+                    time += delta
+            data[ac].append(time.total_seconds()/3600)
+    
+    # generate graph
+    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+    
+    bottom = [0] * len(data[list(aircrafts)[0]])
+    xaxis = pandas.Categorical([f"{x.year}-{x.month}" for x in all_months])
+    xaxis = [datetime.datetime.strptime(val, '%Y-%m') for val in xaxis]
+    for x, aircraft in enumerate(aircrafts):
+        ax.bar(xaxis, data[aircraft], width=15, bottom=bottom, label=aircraft)
+        bottom = [a + b for a, b in zip(bottom, data[aircraft])]
+      
+    # Set x-tick every month
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))  # Format like "Jan 2023"
+
+    fig.autofmt_xdate()  # Rotate and format nicely
+    plt.show()
+    # ax.set_xticklabels([x.month for x in xaxis])
+        
+    # # Add year labels: either as minor ticks, or custom annotation
+    # count = 0
+    # first = True
+    # for date in xaxis:
+    #     month = date.month
+    #     year = date.year
+    #     if month == "1" or first:  # Only show year on January
+    #         first = False
+    #         ax.text(count,-0, str(year), ha='center', va='top')    
+    #     count += 1
+    
+    # plt.xticks(rotation=0)
+    if not pic:
+        plt.title("Blocktimes by Callsign")
+    else: 
+        plt.title("Blocktimes by Callsign (PIC)")
+    plt.legend()
+
+    # write graph to buffer and return 
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close() 
+    buf.seek(0) 
+
+    return Response(content=buf.read(), media_type="image/png")
+
+@app.get("/graph/test")
+async def get_graph_test(request: Request):
+    # prepare data
+    index = [0,1,2,3,4]
+    monthlabels = ["Okt", "Nov", "Dez", "Jan", "Feb"]
+    yearlabels = {0: "2022", 3: "2023"}
+    data = {
+        "A210": [2,5,8,3,5],
+        "P208": [6,3,9,1,2],
+        "DA40": [2,0,9,4,1],
+        "SR20": [3,5,6,7,4]
+    }
+    
+    # graph
+    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+    barwidth=0.125
+    
+    stacked = False
+    if stacked:
+        bottom = [0] * len(next(iter(data.values())))
+        for k,v in data.items():
+            ax.bar(index, v, width=barwidth, label=k, bottom=bottom)
+            bottom = [a + b for a, b in zip(bottom, v)]
+    else:
+        bars = len(data.keys())
+        width = bars * barwidth
+        c = 1
+        for k,v in data.items():
+            ax.bar([x-width/2+c*barwidth for x in index], v, width=barwidth, label=k)
+            c+=1
+
+    
+    plt.xticks(ticks=index, labels=monthlabels, rotation=0)
+    
+    for k,v in yearlabels.items():
+        ax.text(k, -0.1, v, ha='center', va='top', fontsize=10, transform=ax.get_xaxis_transform())
+    
+    plt.legend()
+    
+    # output 
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close() 
+    buf.seek(0) 
     return Response(content=buf.read(), media_type="image/png")

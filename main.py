@@ -83,6 +83,8 @@ def timedelta_toString(delta : datetime.timedelta) -> str:
     minutes = total_minutes % 60
     return f"{hours:02d}:{minutes:02d}"
 
+
+
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
@@ -157,6 +159,47 @@ async def get_graph_blocktimes(request: Request, aircraft : str = None):
     plt.xticks(rotation=90)
     plt.title(f"Blocktimes {aircraft}" if aircraft else "Blocktimes")
     plt.tight_layout(pad=2)
+
+    # write graph to buffer and return 
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close() 
+    buf.seek(0) 
+
+    return Response(content=buf.read(), media_type="image/png")
+
+@app.get("/graph/other")
+async def get_graph_blocktimes(request: Request):
+    flightlog = FlightLog()
+    grouped = flightlog.get_flights_groupedby_person()
+
+    blocktimes = defaultdict()
+    for person, data in grouped.items():
+        time = datetime.timedelta(0)
+        for flight in data:
+            blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+            delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
+            time += delta
+        blocktimes[person] = time
+        
+    blocktimes = dict(sorted(blocktimes.items(), key=lambda item: item[1].total_seconds(), reverse=True))
+            
+    persons = blocktimes.keys()
+    values = [x.total_seconds()/3600 for x in blocktimes.values()]
+    
+    persons = ["Alone" if len(x) <= 0 else x for x in persons]
+    
+    for p, v in zip(persons, values):
+        logger.info(f"{p}: {v}")
+        
+    # generate graph
+    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+    
+    ax.bar(persons, values)
+        
+    plt.xticks(rotation=45)
+    plt.title("Blocktime by person")
+    plt.legend()
 
     # write graph to buffer and return 
     buf = io.BytesIO()

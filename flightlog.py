@@ -2,6 +2,7 @@ import json, os, logging, datetime
 from collections import defaultdict
 import pandas
 import typing
+import re
 
 logging.basicConfig(
     level=logging.INFO,
@@ -121,6 +122,21 @@ class FlightLog():
                 return True
             return False
         return True
+    
+    def remove_html_tags(text):
+        return re.sub(r'<[^>]*>', '', text)
+    
+    def get_flights_groupedby_person(self):
+        grouped = defaultdict(list)
+        for flight in self.flights:     
+            other = FlightLog.remove_html_tags(flight["crew"])
+            other = re.sub(r'[0-9]+', '', other)
+            other = other.split("/")
+            other = [x for x in other if not "brenner" in x.lower()]
+            other = [x.strip() for x in other]
+            other = ", ".join(other)
+            grouped[other].append(flight)   
+        return grouped 
     
     def get_flights_groupedby_month(self, f_aircraft=None, f_pic=False):
         grouped = defaultdict(list)

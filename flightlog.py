@@ -27,6 +27,14 @@ class FlightLog():
                 self.data = json.loads(f.read())
                 self.process()
     
+    def get_persons(self, flight):
+        persons = FlightLog.remove_html_tags(flight["crew"])
+        persons = re.sub(r'[0-9]+', '', persons)
+        persons = persons.split("/")
+        persons = [x for x in persons if not "brenner" in x.lower()]
+        persons = [x.strip() for x in persons]
+        return persons
+    
     def process(self):
         self.flights = []
         for flight in self.data:
@@ -34,6 +42,7 @@ class FlightLog():
             flight["date"] = datetime.datetime.fromtimestamp(flight["flightdate"]["sortval"])
             flight["year"] = flight["date"].year
             flight["month"] = flight["date"].month
+            flight["persons"] = ", ".join(self.get_persons(flight))
             self.flights.append(flight)
         self.min = min(self.flights, key=lambda x: x["flightdate"]["sortval"])
         self.max = max(self.flights, key=lambda x: x["flightdate"]["sortval"])

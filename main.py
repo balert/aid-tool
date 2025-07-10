@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging, re, json, os
 import datetime
+import math
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -9,7 +10,7 @@ import matplotlib.dates as mdates
 import io
 from collections import defaultdict
 import pandas
-from typing import Optional
+from typing import Optional, Union
 
 from config import *
 from aid import AID
@@ -134,6 +135,44 @@ async def root(request: Request):
     refresh_data()
     return RedirectResponse(url="/")
 
+def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = None, ylabel : str = None, stacked : bool = True, barwidth : float = 0.9, legend : bool = True) -> Response:
+    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+    
+    if stacked:
+        bottom = [0] * len(next(iter(values.values())))
+        for x, v in values.items():
+            ax.bar(keys, v, width=barwidth, label=x, bottom=bottom)
+            bottom = [a + b for a, b in zip(bottom, v)]
+    else:
+        barwidth = barwidth / len(values)
+        width = len(values) * barwidth
+        c = 1
+        for x, v in values.items():
+            k = list(range(len(v)))
+            ax.bar([x-width/2+c*barwidth-barwidth/2 for x in k], v, width=barwidth, label=x)
+            c+=1
+        
+    if xlabel:
+        ax.set_xlabel(xlabel)
+    if ylabel:
+        ax.set_ylabel(ylabel)
+    if title: 
+        ax.set_title(title)
+        
+    logger.info(ax.get_ylim())
+    ax.set_ylim(top=math.ceil(max(ax.get_ylim())/0.8))
+    
+    ax.set_xticks(list(range(len(keys))))
+    ax.set_xticklabels(keys, rotation=90)
+    if legend:
+        fig.legend()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0) 
+
+    return Response(content=buf.read(), media_type="image/png")
+
 @app.get("/graph/blocktimes")
 async def get_graph_blocktimes(request: Request, aircraft : str = None):
     flightlog = FlightLog()
@@ -153,23 +192,10 @@ async def get_graph_blocktimes(request: Request, aircraft : str = None):
     dates = [f"{year}-{month:02d}" for (year, month) in blocktimes.keys()]
     values = [x.total_seconds()/3600 for x in blocktimes.values()]
   
-    # generate graph
-    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
-    ax.bar(dates, values)
-    plt.xticks(rotation=90)
-    plt.title(f"Blocktimes {aircraft}" if aircraft else "Blocktimes")
-    plt.tight_layout(pad=2)
-
-    # write graph to buffer and return 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    plt.close() 
-    buf.seek(0) 
-
-    return Response(content=buf.read(), media_type="image/png")
+    return graph_bar(dates, {"values": values}, title="Blocktimes", xlabel="Date", ylabel="Blocktime [h]", legend=False)
 
 @app.get("/graph/other")
-async def get_graph_blocktimes(request: Request):
+async def get_graph_other(request: Request, stacked : bool = True):
     flightlog = FlightLog()
     grouped = flightlog.get_flights_groupedby_person()
 
@@ -180,6 +206,7 @@ async def get_graph_blocktimes(request: Request):
             blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
             delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
             time += delta
+        person = "Keiner" if len(person) <= 0 else person
         blocktimes[person] = time
         
     blocktimes = dict(sorted(blocktimes.items(), key=lambda item: item[1].total_seconds(), reverse=True))
@@ -187,27 +214,7 @@ async def get_graph_blocktimes(request: Request):
     persons = blocktimes.keys()
     values = [x.total_seconds()/3600 for x in blocktimes.values()]
     
-    persons = ["Alone" if len(x) <= 0 else x for x in persons]
-    
-    for p, v in zip(persons, values):
-        logger.info(f"{p}: {v}")
-        
-    # generate graph
-    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
-    
-    ax.bar(persons, values)
-        
-    plt.xticks(rotation=45)
-    plt.title("Blocktime by person")
-    plt.legend()
-
-    # write graph to buffer and return 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    plt.close() 
-    buf.seek(0) 
-
-    return Response(content=buf.read(), media_type="image/png")
+    return graph_bar(persons, {"a": values}, xlabel="Crew", ylabel="Blocktime [hours]", stacked=stacked, title="FFG Mitflieger / Lehrer", legend=False)
 
 @app.get("/graph/bt_ac")
 async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
@@ -227,29 +234,8 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
                     time += delta
             data[ac].append(time.total_seconds()/3600)
     
-    # generate graph
-    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
-    
-    bottom = [0] * len(data[list(aircrafts)[0]])
-    for x, aircraft in enumerate(aircrafts):
-        ax.bar([f"{x.year}-{x.month}" for x in all_months], data[aircraft], bottom=bottom, label=aircraft)
-        bottom = [a + b for a, b in zip(bottom, data[aircraft])]
-        
-    plt.xticks(rotation=45)
-    plt.ylim(0,10)
-    if not pic:
-        plt.title("Blocktimes by Aircraft Type")
-    else: 
-        plt.title("Blocktimes by Aircraft Type (PIC)")
-    plt.legend()
-
-    # write graph to buffer and return 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    plt.close() 
-    buf.seek(0) 
-
-    return Response(content=buf.read(), media_type="image/png")
+    all_months = [f"{month.year}-{month.month:02d}" for month in all_months]
+    return graph_bar(all_months, data, title="Blocktimes by Aircraft", xlabel="Date", ylabel="Blocktime [h]")
 
 @app.get("/graph/bt_cs")
 async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
@@ -269,92 +255,5 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
                     time += delta
             data[ac].append(time.total_seconds()/3600)
     
-    # generate graph
-    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
-    
-    bottom = [0] * len(data[list(aircrafts)[0]])
-    xaxis = pandas.Categorical([f"{x.year}-{x.month}" for x in all_months])
-    xaxis = [datetime.datetime.strptime(val, '%Y-%m') for val in xaxis]
-    for x, aircraft in enumerate(aircrafts):
-        ax.bar(xaxis, data[aircraft], width=15, bottom=bottom, label=aircraft)
-        bottom = [a + b for a, b in zip(bottom, data[aircraft])]
-      
-    # Set x-tick every month
-    ax.xaxis.set_major_locator(mdates.MonthLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))  # Format like "Jan 2023"
-
-    fig.autofmt_xdate()  # Rotate and format nicely
-    plt.show()
-    # ax.set_xticklabels([x.month for x in xaxis])
-        
-    # # Add year labels: either as minor ticks, or custom annotation
-    # count = 0
-    # first = True
-    # for date in xaxis:
-    #     month = date.month
-    #     year = date.year
-    #     if month == "1" or first:  # Only show year on January
-    #         first = False
-    #         ax.text(count,-0, str(year), ha='center', va='top')    
-    #     count += 1
-    
-    # plt.xticks(rotation=0)
-    if not pic:
-        plt.title("Blocktimes by Callsign")
-    else: 
-        plt.title("Blocktimes by Callsign (PIC)")
-    plt.legend()
-
-    # write graph to buffer and return 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    plt.close() 
-    buf.seek(0) 
-
-    return Response(content=buf.read(), media_type="image/png")
-
-@app.get("/graph/test")
-async def get_graph_test(request: Request):
-    # prepare data
-    index = [0,1,2,3,4]
-    monthlabels = ["Okt", "Nov", "Dez", "Jan", "Feb"]
-    yearlabels = {0: "2022", 3: "2023"}
-    data = {
-        "A210": [2,5,8,3,5],
-        "P208": [6,3,9,1,2],
-        "DA40": [2,0,9,4,1],
-        "SR20": [3,5,6,7,4]
-    }
-    
-    # graph
-    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
-    barwidth=0.125
-    
-    stacked = False
-    if stacked:
-        bottom = [0] * len(next(iter(data.values())))
-        for k,v in data.items():
-            ax.bar(index, v, width=barwidth, label=k, bottom=bottom)
-            bottom = [a + b for a, b in zip(bottom, v)]
-    else:
-        bars = len(data.keys())
-        width = bars * barwidth
-        c = 1
-        for k,v in data.items():
-            ax.bar([x-width/2+c*barwidth for x in index], v, width=barwidth, label=k)
-            c+=1
-
-    
-    plt.xticks(ticks=index, labels=monthlabels, rotation=0)
-    
-    for k,v in yearlabels.items():
-        ax.text(k, -0.1, v, ha='center', va='top', fontsize=10, transform=ax.get_xaxis_transform())
-    
-    plt.legend()
-    
-    # output 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    plt.close() 
-    buf.seek(0) 
-    return Response(content=buf.read(), media_type="image/png")
+    all_months = [f"{month.year}-{month.month:02d}" for month in all_months]
+    return graph_bar(all_months, data, title="Blocktimes by Callsign", xlabel="Date", ylabel="Blocktime [h]")

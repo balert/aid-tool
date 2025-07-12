@@ -33,7 +33,7 @@ plt.style.use('fast')
 def refresh_data():
     for tenant in tenants:
         currentyear = datetime.datetime.now().year
-        since = "%s-01-01" % (currentyear - 1)
+        since = "%s-01-01" % (currentyear - 3)
         until = "%s-01-01" % (currentyear + 1)
         
         logger.debug("Refreshing %s from %s till %s" % (tenant['name'], since, until))
@@ -113,7 +113,8 @@ async def root(request: Request):
             delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
             time += delta
         blocktimes[k] = time
-    stat["avg_blocktime_month"] = round(pandas.Series(blocktimes.values()).mean().total_seconds()/3600,1)
+    if len(blocktimes) > 0:
+        stat["avg_blocktime_month"] = round(pandas.Series(blocktimes.values()).mean().total_seconds()/3600,1)
     
     return templates.TemplateResponse(
         request=request, name="main.html", context={"data": data, "statistics": stat}
@@ -131,7 +132,7 @@ async def get_flight(request: Request, flight_id: int):
 
 @app.get("/refresh")
 async def root(request: Request):
-    print("refresh")
+    logger.info("refreshing data...")
     refresh_data()
     return RedirectResponse(url="/")
 
@@ -206,7 +207,7 @@ async def get_graph_other(request: Request, stacked : bool = True):
             blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
             delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
             time += delta
-        person = "Keiner" if len(person) <= 0 else person
+        person = "Nicht-FFG" if len(person) <= 0 else person
         blocktimes[person] = time
         
     blocktimes = dict(sorted(blocktimes.items(), key=lambda item: item[1].total_seconds(), reverse=True))
@@ -235,7 +236,8 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
             data[ac].append(time.total_seconds()/3600)
     
     all_months = [f"{month.year}-{month.month:02d}" for month in all_months]
-    return graph_bar(all_months, data, title="Blocktimes by Aircraft", xlabel="Date", ylabel="Blocktime [h]")
+    title = "Blocktimes by Aircraft" if not pic else "Blocktimes by Aircraft (PIC)"
+    return graph_bar(all_months, data, title=title, xlabel="Date", ylabel="Blocktime [h]")
 
 @app.get("/graph/bt_cs")
 async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):

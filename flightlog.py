@@ -12,11 +12,18 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
 class FlightLog():
     acc_blocktime = None 
     acc_blocktime_pic = None 
     acc_airtime = None 
     landings = None
+    flights = list()
     
     def __init__(self, tenant=None):
         if not tenant:
@@ -24,8 +31,14 @@ class FlightLog():
         self.filename = 'flightlog_%s.dat' % tenant
         if os.path.exists(self.filename):
             with open(self.filename, "r") as f:
-                self.data = json.loads(f.read())
-                self.process()
+                file_contents = f.read()
+                if len(file_contents) > 0:
+                    self.data = json.loads(file_contents)
+                    self.process()
+                else: 
+                    self.data = list()
+        else:
+            self.data = list()
     
     def get_persons(self, flight):
         persons = FlightLog.remove_html_tags(flight["crew"])
@@ -65,15 +78,20 @@ class FlightLog():
         return flight
     
     def get_all(self):
-        return self.flights
+        return self.flights if self.flights else list()
     
     def sort(self):
+        if not hasattr(self, "data"):
+            return
         self.data.sort(key=lambda x: x['flightdate']['sortval'])
         self.write()
         
     def write(self):
+        if not hasattr(self, "data"):
+            return
+        logger.info(self.data)
         with open(self.filename, "w") as f:
-            f.write(json.dumps(self.data))
+            f.write(json.dumps(self.data, cls=DateTimeEncoder))
 
     def get_blocktime(self) -> datetime.timedelta: 
         if not self.acc_blocktime:
@@ -160,7 +178,7 @@ class FlightLog():
             
         # fill gaps (empty months)
         if len(grouped) <= 0:
-            return dict()
+            return (None, dict())
         
         all_months = pandas.date_range(start=self.min["date"].replace(day=1), end=self.max["date"], freq='MS').to_period('M')
         for month in all_months:

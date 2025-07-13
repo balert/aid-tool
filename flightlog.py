@@ -66,15 +66,16 @@ class FlightLog():
                 # print("Skipping: ", flight)
                 continue
             
-            flightids = [f['flightid'] for f in self.data]
-            if flight['flightid'] in flightids:
+            flightids = [f"{f['tenant']}-{f['flightid']}" for f in self.data]
+            if f"{flight['tenant']}-{flight['flightid']}" in flightids:
                 # print("Skipping %s because already exists in data." % flight['flightid'])
                 continue
             self.data.append(flight)
         self.write()
     
-    def get_flight(self, flight_id: int):
-        flight = next((f for f in self.flights if int(f["flightid"]) == flight_id), None)
+    def get_flight(self, flight_id: str):
+        logger.info(flight_id)
+        flight = next((f for f in self.flights if f"{f['tenant']}-{f['flightid']}" == flight_id), None)
         return flight
     
     def get_all(self):

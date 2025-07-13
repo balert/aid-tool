@@ -33,10 +33,10 @@ plt.style.use('fast')
 def refresh_data():
     for tenant in tenants:
         currentyear = datetime.datetime.now().year
-        since = "%s-01-01" % (currentyear - 3)
+        since = "%s-01-01" % (currentyear - 1)
         until = "%s-01-01" % (currentyear + 1)
         
-        logger.debug("Refreshing %s from %s till %s" % (tenant['name'], since, until))
+        logger.info("Refreshing %s from %s till %s" % (tenant['name'], since, until))
         
         aid = AID(tenant['name'],tenant['username'],tenant['password'])
         ret = aid.get_flightlog(since, until)
@@ -121,7 +121,7 @@ async def root(request: Request):
     )
 
 @app.get("/flight/{flight_id}")
-async def get_flight(request: Request, flight_id: int):
+async def get_flight(request: Request, flight_id: str):
     flightlog = FlightLog()
     flightdata = flightlog.get_flight(flight_id)
     for k,v in flightdata.items():

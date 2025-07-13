@@ -69,7 +69,7 @@
                     </tr>
                     {% for flight in data %}
                     <tr>
-                        <td><a href="/flight/{{ flight.flightid }}">{{ flight.tenant[:3] }} {{ flight.flightid }}</a></td>
+                        <td><a href="/flight/{{ flight.tenant }}-{{ flight.flightid }}">{{ flight.tenant[:3] }} {{ flight.flightid }}</a></td>
                         <td>{{ flight.date.strftime('%d.%m.%Y') }}</td>
                         <td>{{ flight.blockoff }}</td>
                         <td>{{ flight.departure }}</td>

@@ -60,14 +60,15 @@ class FlightLog():
         self.min = min(self.flights, key=lambda x: x["flightdate"]["sortval"])
         self.max = max(self.flights, key=lambda x: x["flightdate"]["sortval"])
     
-    def store(self, data):
+    def store(self, data, tenant : str = None):
         for flight in data:
             if flight['flightid'] == 0:
                 # print("Skipping: ", flight)
                 continue
             
-            flightids = [f"{f['tenant']}-{f['flightid']}" for f in self.data]
-            if f"{flight['tenant']}-{flight['flightid']}" in flightids:
+            tenant = tenant if tenant else flight['tenant']
+            flightids = [f"{tenant}-{f['flightid']}" for f in self.data]
+            if f"{tenant}-{flight['flightid']}" in flightids:
                 # print("Skipping %s because already exists in data." % flight['flightid'])
                 continue
             self.data.append(flight)

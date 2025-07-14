@@ -42,7 +42,7 @@ def refresh_data():
         ret = aid.get_flightlog(since, until)
 
         flightlog = FlightLog(tenant['name'])
-        flightlog.store(ret['data'])
+        flightlog.store(ret['data'], tenant["name"])
     merge_data()
 
 def flight_id(flight):
@@ -136,8 +136,20 @@ async def root(request: Request):
     refresh_data()
     return RedirectResponse(url="/")
 
-def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = None, ylabel : str = None, stacked : bool = True, barwidth : float = 0.9, legend : bool = True) -> Response:
+def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = None, ylabel : str = None, stacked : bool = True, barwidth : float = 0.9, legend : bool = True, xdates : bool = False) -> Response:
     fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+    
+    if xdates:
+        keys = [datetime.datetime.strptime(date, '%Y-%m').date() for date in keys]
+        plt.gca().xaxis.set_minor_formatter(mdates.DateFormatter('%b'))
+        plt.gca().xaxis.set_minor_locator(mdates.MonthLocator())
+        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%b'))
+        plt.gca().xaxis.set_major_locator(mdates.YearLocator())
+        # plt.gcf().autofmt_xdate()
+        barwidth = 25
+    else: 
+        ax.set_xticks(list(range(len(keys))))
+        ax.set_xticklabels(keys, rotation=45)
     
     if stacked:
         bottom = [0] * len(next(iter(values.values())))
@@ -160,11 +172,11 @@ def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = Non
     if title: 
         ax.set_title(title)
         
-    logger.info(ax.get_ylim())
     ax.set_ylim(top=math.ceil(max(ax.get_ylim())/0.8))
-    
-    ax.set_xticks(list(range(len(keys))))
-    ax.set_xticklabels(keys, rotation=90)
+
+    # plt.xticks(rotation=90)
+    plt.setp(ax.xaxis.get_minorticklabels(), rotation=90)
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=90)
     if legend:
         fig.legend()
 
@@ -193,7 +205,7 @@ async def get_graph_blocktimes(request: Request, aircraft : str = None):
     dates = [f"{year}-{month:02d}" for (year, month) in blocktimes.keys()]
     values = [x.total_seconds()/3600 for x in blocktimes.values()]
   
-    return graph_bar(dates, {"values": values}, title="Blocktimes", xlabel="Date", ylabel="Blocktime [h]", legend=False)
+    return graph_bar(dates, {"values": values}, title="Blocktimes", xlabel="Date", ylabel="Blocktime [h]", legend=False, xdates=True)
 
 @app.get("/graph/other")
 async def get_graph_other(request: Request, stacked : bool = True):
@@ -237,7 +249,7 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
     
     all_months = [f"{month.year}-{month.month:02d}" for month in all_months]
     title = "Blocktimes by Aircraft" if not pic else "Blocktimes by Aircraft (PIC)"
-    return graph_bar(all_months, data, title=title, xlabel="Date", ylabel="Blocktime [h]")
+    return graph_bar(all_months, data, title=title, xlabel="Date", ylabel="Blocktime [h]", xdates=True)
 
 @app.get("/graph/bt_cs")
 async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
@@ -258,4 +270,4 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
             data[ac].append(time.total_seconds()/3600)
     
     all_months = [f"{month.year}-{month.month:02d}" for month in all_months]
-    return graph_bar(all_months, data, title="Blocktimes by Callsign", xlabel="Date", ylabel="Blocktime [h]")
+    return graph_bar(all_months, data, title="Blocktimes by Callsign", xlabel="Date", ylabel="Blocktime [h]", xdates=True)

@@ -8,17 +8,27 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <title>FlightLog</title>
     <style>
-        .grid {
+        .row {
             display: flex;
-            gap: 2rem;
+            flex-wrap: wrap;
         }
 
-        .left-column {
-            flex: 4;
+        .column-left {
+            flex: 3 1 30%;
+            padding: 1rem;
         }
 
-        .right-column {
-            flex: 3;
+        .column-right {
+            flex: 2 1 70%;
+            padding: 1rem;
+        }
+
+        @media (max-width: 768px) {
+
+            .column-left,
+            .column-right {
+                flex: 1 1 100%;
+            }
         }
 
         img {
@@ -27,15 +37,24 @@
             display: block;
             margin: 25px 5px;
         }
+
         th {
             font-weight: bold;
         }
-        td, th, li {
+
+        td,
+        th,
+        li {
             white-space: nowrap;
-            font-size:medium;
-            padding: 1px; 
+            font-size: small;
+            padding: 1px;
         }
-        table, td, th, div, img {
+
+        table,
+        td,
+        th,
+        div,
+        img {
             border: 0px solid red;
         }
     </style>
@@ -43,8 +62,25 @@
 
 <body>
     <main class="container-fluid">
-        <div class="grid">
-            <section class="left-column">
+        <div class="row">
+            <div class="column-left" style="padding: 1rem;">
+                <h2>Statistics</h2>
+                <ul>
+                    <li>Blocktime: {{ statistics["blocktime"] }}h</li>
+                    <li>Avg. month blocktime: {{ statistics["avg_blocktime_month"] }}h</li>
+                    <li>Blocktime (PIC): {{ statistics["blocktime_pic"] }}h</li>
+                    <li>Blocktime (Dual): {{ statistics["blocktime_dual"] }}h</li>
+                    <li>Airtime: {{ statistics["airtime"] }}h</li>
+                    <li>Landings: {{ statistics["landings"] }}</li>
+                    <li>Aircraft: {{ statistics["aircraft"] }}</li>
+                </ul>
+                <img src="/graph/bt_ac" style="max-width: 100%; height: auto;">
+                <img src="/graph/bt_ac?pic=1" style="max-width: 100%; height: auto;">
+                <img src="/graph/other" style="max-width: 100%; height: auto;">
+                <img src="/graph/bt_cs" style="max-width: 100%; height: auto;">
+                </section>
+            </div>
+            <div class="column-right" style="padding: 1rem;">
                 <h1>FlightLog</h1>
 
                 <a href="/refresh">Refresh &#x1F501;</a>
@@ -69,7 +105,8 @@
                     </tr>
                     {% for flight in data %}
                     <tr>
-                        <td><a href="/flight/{{ flight.tenant }}-{{ flight.flightid }}">{{ flight.tenant[:3] }} {{ flight.flightid }}</a></td>
+                        <td><a href="/flight/{{ flight.tenant }}-{{ flight.flightid }}">{{ flight.tenant[:3] }} {{
+                                flight.flightid }}</a></td>
                         <td>{{ flight.date.strftime('%d.%m.%Y') }}</td>
                         <td>{{ flight.blockoff }}</td>
                         <td>{{ flight.departure }}</td>
@@ -88,25 +125,9 @@
                     </tr>
                     {% endfor %}
                 </table>
-            </section>
-            <section class="right-column">
-                <h2>Statistics</h2>
-                <ul>
-                    <li>Blocktime: {{ statistics["blocktime"] }}h</li>
-                    <li>Avg. month blocktime: {{ statistics["avg_blocktime_month"] }}h</li>
-                    <li>Blocktime (PIC): {{ statistics["blocktime_pic"] }}h</li>
-                    <li>Blocktime (Dual): {{ statistics["blocktime_dual"] }}h</li>
-                    <li>Airtime: {{ statistics["airtime"] }}h</li>
-                    <li>Landings: {{ statistics["landings"] }}</li>
-                    <li>Aircraft: {{ statistics["aircraft"] }}</li>
-                </ul>
-                <img src="/graph/bt_ac" style="max-width: 100%; height: auto;">
-                <img src="/graph/bt_ac?pic=1" style="max-width: 100%; height: auto;">
-                <img src="/graph/other" style="max-width: 100%; height: auto;">
-                <img src="/graph/bt_cs" style="max-width: 100%; height: auto;">
-            </section>
+            </div>
+
         </div>
-    </main>
 </body>
 
 </html>

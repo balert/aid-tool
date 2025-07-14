@@ -40,6 +40,9 @@ def refresh_data():
         
         aid = AID(tenant['name'],tenant['username'],tenant['password'])
         ret = aid.get_flightlog(since, until)
+        
+        for flight in ret['data']:
+            flight['tenant'] = tenant['name']
 
         flightlog = FlightLog(tenant['name'])
         flightlog.store(ret['data'])

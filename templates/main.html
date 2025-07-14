@@ -14,16 +14,16 @@
         }
 
         .column-left {
-            flex: 3 1 30%;
+            flex: 3 1 40%;
             padding: 1rem;
         }
 
         .column-right {
-            flex: 2 1 70%;
+            flex: 2 1 60%;
             padding: 1rem;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 500px) {
 
             .column-left,
             .column-right {
@@ -63,9 +63,11 @@
 <body>
     <main class="container-fluid">
         <div class="row">
+            
             <div class="column-left" style="padding: 1rem;">
-                <h2>Statistics</h2>
+                <h1>FlightLog</h1>
                 <ul>
+                    <li>Tracked Flights: {{ statistics["noflights"] }}</li>
                     <li>Blocktime: {{ statistics["blocktime"] }}h</li>
                     <li>Avg. month blocktime: {{ statistics["avg_blocktime_month"] }}h</li>
                     <li>Blocktime (PIC): {{ statistics["blocktime_pic"] }}h</li>
@@ -81,7 +83,6 @@
                 </section>
             </div>
             <div class="column-right" style="padding: 1rem;">
-                <h1>FlightLog</h1>
 
                 <a href="/refresh">Refresh &#x1F501;</a>
                 <table>

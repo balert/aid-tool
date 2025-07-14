@@ -46,6 +46,7 @@ def refresh_data():
 
         flightlog = FlightLog(tenant['name'])
         flightlog.store(ret['data'])
+    logger.info("Mergin data...")
     merge_data()
 
 def flight_id(flight):
@@ -103,6 +104,7 @@ async def root(request: Request):
     stat["airtime"] = timedelta_toString(flightlog.get_airtime())
     stat["landings"] = f"{flightlog.get_landings()}"
     stat["aircraft"] = ", ".join(flightlog.get_aircraft_types())
+    stat["noflights"] = len(flightlog.get_all())
     
     # average blocktime
     _, grouped = flightlog.get_flights_groupedby_month()

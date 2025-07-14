@@ -42,7 +42,7 @@ def refresh_data():
         ret = aid.get_flightlog(since, until)
 
         flightlog = FlightLog(tenant['name'])
-        flightlog.store(ret['data'], tenant["name"])
+        flightlog.store(ret['data'])
     merge_data()
 
 def flight_id(flight):
@@ -83,8 +83,6 @@ def timedelta_toString(delta : datetime.timedelta) -> str:
     hours = total_minutes // 60
     minutes = total_minutes % 60
     return f"{hours:02d}:{minutes:02d}"
-
-
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")

@@ -28,6 +28,7 @@ class FlightLog():
     def __init__(self, tenant=None):
         if not tenant:
             tenant = "merged"
+        self.tenant = tenant
         self.filename = 'flightlog_%s.dat' % tenant
         if os.path.exists(self.filename):
             with open(self.filename, "r") as f:
@@ -60,15 +61,16 @@ class FlightLog():
         self.min = min(self.flights, key=lambda x: x["flightdate"]["sortval"])
         self.max = max(self.flights, key=lambda x: x["flightdate"]["sortval"])
     
-    def store(self, data, tenant : str = None):
+    def store(self, data):
+        flightids = [f"{f['tenant']}-{f['flightid']}" for f in self.data]
         for flight in data:
             if flight['flightid'] == 0:
                 # print("Skipping: ", flight)
                 continue
             
-            tenant = tenant if tenant else flight['tenant']
-            flightids = [f"{tenant}-{f['flightid']}" for f in self.data]
-            if f"{tenant}-{flight['flightid']}" in flightids:
+            flightid = f"{flight['tenant']}-{flight['flightid']}"
+
+            if flightid in flightids:
                 # print("Skipping %s because already exists in data." % flight['flightid'])
                 continue
             self.data.append(flight)
@@ -91,7 +93,6 @@ class FlightLog():
     def write(self):
         if not hasattr(self, "data"):
             return
-        logger.info(self.data)
         with open(self.filename, "w") as f:
             f.write(json.dumps(self.data, cls=DateTimeEncoder))
 

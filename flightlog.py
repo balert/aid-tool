@@ -1,4 +1,5 @@
 import json, os, logging, datetime
+from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 import pandas
 import typing
@@ -183,7 +184,8 @@ class FlightLog():
         if len(grouped) <= 0:
             return (None, dict())
         
-        all_months = pandas.date_range(start=self.min["date"].replace(day=1), end=self.max["date"], freq='MS').to_period('M')
+        daterange = pandas.date_range(start=self.min["date"].replace(day=1), end=self.max["date"]+relativedelta(months=1), freq='MS', inclusive="both")
+        all_months = daterange.to_period('M')
         for month in all_months:
             len(grouped[month.year,month.month])
             

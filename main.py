@@ -2,7 +2,7 @@
 import logging, re, json, os
 import datetime
 import math
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, Form
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 import matplotlib.pyplot as plt
@@ -16,6 +16,7 @@ from config import *
 from aid import AID
 from flightlog import FlightLog
 from notes import Notes
+from flightcomments import FlightComments
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +30,9 @@ notesfilename = "flightlog_merged_notes.dat"
 
 # plt.style.use('Solarize_Light2')
 plt.style.use('fast')
+
+import airportsdata
+airports = airportsdata.load()
 
 def refresh_data():
     for tenant in tenants:
@@ -92,10 +96,12 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
-async def root(request: Request):
+async def root(request: Request, edit: Optional[str] = None):
     flightlog = FlightLog()
     data = flightlog.get_all()
     data.reverse()
+    
+    comments = FlightComments()
 
     stat = {}
     stat["blocktime"] = timedelta_toString(flightlog.get_blocktime())
@@ -120,9 +126,17 @@ async def root(request: Request):
         stat["avg_blocktime_month"] = round(pandas.Series(blocktimes.values()).mean().total_seconds()/3600,1)
     
     return templates.TemplateResponse(
-        request=request, name="main.html", context={"data": data, "statistics": stat}
+        request=request, name="main.html", context={"data": data, "statistics": stat, "edit": edit, "comments": comments.data, "airports": airports}
     )
-
+    
+@app.post("/submit")
+async def submit(request: Request, flightid: str = Form(), comment: str = Form()):
+    logger.info(f"{flightid}: {comment}")
+    comments = FlightComments()
+    comments.set_comment(flightid, comment)
+    comments.save()
+    return RedirectResponse(url="/", status_code=303)
+    
 @app.get("/flight/{flight_id}")
 async def get_flight(request: Request, flight_id: str):
     flightlog = FlightLog()

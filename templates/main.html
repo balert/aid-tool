@@ -103,6 +103,7 @@
                         <th>pic</th>
                         <th>crew</th>
                         <th>pricecat</th>
+                        <th>comment</th>
                     </tr>
                     {% for flight in data %}
                     <tr>
@@ -110,19 +111,26 @@
                                 flight.flightid }}</a></td>
                         <td>{{ flight.date.strftime('%d.%m.%Y') }}</td>
                         <td>{{ flight.blockoff }}</td>
-                        <td>{{ flight.departure }}</td>
+                        <td title="{{ flight.departure }}">{{ airports[flight.departure]["name"] | replace("Airport", "" )}}</td>
                         <td>{{ flight.takeoff }}</td>
                         <td>{{ flight.actype }}</td>
                         <td>{{ flight.callsign }}</td>
                         <td>{{ flight.airtime }}</td>
                         <td>{{ flight.landing }}</td>
                         <td>{{ flight.landings }}</td>
-                        <td>{{ flight.destination }}</td>
+                        <td title="{{ flight.destination }}">{{ airports[flight.destination]["name"] | replace("Airport", "" )}}</td>
                         <td>{{ flight.blockon }}</td>
                         <td>{{ flight.blocktime }}</td>
                         <td>{{ "&#x1F7E2;" | safe if flight.pic else "&#x1F534;" | safe }}</td>
                         <td>{{ flight.persons }}</td>
                         <td>{{ flight.pricecat }}</td>
+                        {% if edit ==  flight.tenant ~ "-" ~ flight.flightid  %}
+                        <form action="/submit" method="post">
+                            <td><input type="text" id="comment" name="comment" required><input type="hidden" name="flightid" value="{{ edit }}" /><button type="submit">Submit</button></td>
+                        </form>
+                        {% else %}
+                        <td>{{ comments[flight.tenant ~ "-" ~ flight.flightid] }}<a href="?edit={{ flight.tenant }}-{{ flight.flightid }}">✏️</a></td>
+                        {%endif%} 
                     </tr>
                     {% endfor %}
                 </table>

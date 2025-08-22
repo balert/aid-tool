@@ -20,8 +20,8 @@ class DateTimeEncoder(json.JSONEncoder):
         return super().default(obj)
 
 class Flight():
-    def __init__(self, parent, tenant, data):
-        self.parent = parent
+    def __init__(self, metadata, tenant, data):
+        self.metadata = metadata
         self.tenant = tenant
         self.id = data['flightid']
         self.sortval = data["flightdate"]["sortval"]
@@ -64,7 +64,10 @@ class Flight():
         crew = crew.split("/")
         crew = [x for x in crew if not "brenner" in x.lower()]
         crew = [x.strip() for x in crew]
-        return crew
+        return crew or "-"
+    
+    def getPax(self) -> str:
+        return self.getMetadata("pax") or "-"
     
     def getPricecat(self) -> str:
         return {
@@ -75,46 +78,23 @@ class Flight():
         }.get(self.pricecat, self.pricecat)
         
     def getMetadata(self, attr: str):
-        meta = self.parent.get_metadata(self.getID())
-        if meta:
+        meta = self.metadata.get_metadata(self.getID())
+        if meta and attr in meta:
             return meta[attr]
         return None
 
-class FlightLog():
-    acc_blocktime = None 
-    acc_blocktime_pic = None 
-    acc_airtime = None 
-    landings = None
-    flights = list()
-
-    def virtual(tenants):
-        flightlog = FlightLog()
-        for t in tenants:
-            tenant = FlightLog.file(t["name"])
-            flightlog.virtual_insert(tenant.get_all())
-        return flightlog 
-    
-    def virtual_insert(self, flights):
-        for flight in flights:
-            if not any(flight.getID() == f.getID() for f in self.flights):
-                self.flights.append(flight)
-        self.flights.sort(key=lambda x: x.sortval, reverse=True)
-        self.min = min(self.flights, key=lambda x: x.sortval)
-        self.max = max(self.flights, key=lambda x: x.sortval)
-    
-    def file(tenant: str):
-        flightlog = FlightLog()
-        flightlog.tenant = tenant
-        flightlog.load_tenant()
-        return flightlog
-    
+class Metadata:
     def __init__(self):
+        self.load_metadata()    
+    
+    def load_metadata(self):
         self.metafilename = "metadata.dat"
         if os.path.exists(self.metafilename):
             with open(self.metafilename, "r") as f:
                 file_contents = f.read()
                 if len(file_contents) > 0:
                     self.metadata = json.loads(file_contents)
+                    logger.info("metadata loaded.")
                     return
         self.metadata = defaultdict()
     
@@ -132,6 +112,36 @@ class FlightLog():
     def write_metadata(self):
         with open(self.metafilename, "w") as f:
             f.write(json.dumps(self.metadata))
+
+class FlightLog:
+    acc_blocktime = None 
+    acc_blocktime_pic = None 
+    acc_airtime = None 
+    landings = None
+    flights = list()
+
+    def virtual(tenants, metadata):
+        flightlog = FlightLog()
+        flightlog.metadata = metadata
+        for t in tenants:
+            tenant = FlightLog.file(t["name"], metadata)
+            flightlog.virtual_insert(tenant.get_all())
+        return flightlog 
+    
+    def virtual_insert(self, flights):
+        for flight in flights:
+            if not any(flight.getID() == f.getID() for f in self.flights):
+                self.flights.append(flight)
+        self.flights.sort(key=lambda x: x.sortval, reverse=True)
+        self.min = min(self.flights, key=lambda x: x.sortval)
+        self.max = max(self.flights, key=lambda x: x.sortval)
+    
+    def file(tenant: str, metadata):
+        flightlog = FlightLog()
+        flightlog.metadata = metadata
+        flightlog.tenant = tenant
+        flightlog.load_tenant()
+        return flightlog
     
     def __str__(self):
         tenant = self.tenant["name"] if "name" in self.tenant else "n/a"
@@ -153,7 +163,7 @@ class FlightLog():
     def process(self):
         self.flights = []
         for flight in self.data:
-            self.flights.append(Flight(self, self.tenant, flight))
+            self.flights.append(Flight(self.metadata, self.tenant, flight))
         self.min = min(self.flights, key=lambda x: x.sortval)
         self.max = max(self.flights, key=lambda x: x.sortval)
     

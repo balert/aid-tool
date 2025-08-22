@@ -84,7 +84,7 @@
         <div class="row">
             
             <div class="column-left" style="padding: 1rem;">
-                <h1><a href="/">FlightLog</a></h1>
+                <h1><a href="/">FlightLog</a> <a href="/refresh">&#x1F501;</a></h1>
                 <ul>
                     <li>Tracked Flights: {{ statistics["noflights"] }}</li>
                     <li>Blocktime: {{ statistics["blocktime"] }}h</li>
@@ -95,15 +95,13 @@
                     <li>Landings: {{ statistics["landings"] }}</li>
                     <li>Aircraft: {{ statistics["aircraft"] }}</li>
                 </ul>
-                <!-- <img src="/graph/bt_ac" style="max-width: 100%; height: auto;">
+                <img src="/graph/bt_ac" style="max-width: 100%; height: auto;">
                 <img src="/graph/bt_ac?pic=1" style="max-width: 100%; height: auto;">
                 <img src="/graph/other" style="max-width: 100%; height: auto;">
-                <img src="/graph/bt_cs" style="max-width: 100%; height: auto;"> -->
+                <img src="/graph/bt_cs" style="max-width: 100%; height: auto;">
                 </section>
             </div>
             <div class="column-right" style="padding: 1rem;">
-
-                <a href="/refresh">Refresh &#x1F501;</a>
                 <table>
                     <tr>
                         <th>ID</th>
@@ -112,7 +110,6 @@
                         <th>Departure</th>
                         <th>Destination</th>
                         <th class="comment">Comment</th>
-                        <th class="comment">Metadata</th>
                         <th>Takeoff</th>
                         <th>Landing</th>
                         <th>Landings</th>
@@ -124,21 +121,26 @@
                     </tr>
                     {% for flight in flightlog.get_all() %}
                     <tr>
-                        <td><a href="/flight/{{ flight.getID() }}">{{ flight.tenant[:3] }} {{ flight.id }}</a></td>
+                        {% if edit ==  flight.getID()  %}
+                        <form action="/submit" method="post">
+                        <input type="hidden" name="flightid" value="{{ edit }}" />
+                        {%endif%} 
+
+                        <td>
+                            {% if edit ==  flight.getID()  %}
+                            <button type="submit">💾</button>
+                            {%else%}
+                            <a href="?edit={{ flight.getID() }}">✏️</a>
+                            {%endif%} 
+                            <a href="/flight/{{ flight.getID() }}">{{ flight.tenant[:3] }} {{ flight.id }}</a>
+                        </td>
                         <td>{{ flight.date.strftime('%d.%m.%Y') }}</td>
                         <td>{{ flight.actype }} ({{ flight.callsign }})</td>
                         <td title="{{ flight.departure }}">{{ airports[flight.departure]["name"] | replace("Airport", "" )}}</td>
                         <td title="{{ flight.destination }}">{{ airports[flight.destination]["name"] | replace("Airport", "" )}}</td>
-                        {% if edit ==  flight.tenant ~ "-" ~ flight.id  %}
-                        <form action="/submit" method="post">
-                            <td class="comment">
-                                <input type="text" id="comment" name="comment" value="{{ comments[flight.getID()] }}">
-                                <input type="hidden" name="flightid" value="{{ edit }}" />
-                                <button type="submit">Submit</button>
-                            </td>
-                        </form>
+                        {% if edit ==  flight.getID()  %}
+                        <td class="comment"><input type="text" id="comment" name="comment" value="{{ comments[flight.getID()] }}"></td>
                         {% else %}
-                        <td class="comment">{{ comments[flight.getID()] }}<a href="?edit={{ flight.getID() }}">✏️</a></td>
                         <td class="comment">{{ flight.getMetadata("comment") }}</td>
                         {%endif%} 
                         <td title="Block off: {{ flight.blockoff }}">{{ flight.takeoff }}</td>
@@ -147,8 +149,16 @@
                         <td title="Blocktime: {{ flight.blocktime }}">{{ flight.airtime }}</td>
                         <td>{{ "&#x1F7E2;" | safe if flight.isPIC() else "&#x1F534;" | safe }}</td>
                         <td>{{ flight.getCrew() | join(", ") }}</td>
-                        <td>{{ flight.pax }}</td>
+                        
+                        {% if edit ==  flight.getID()  %}
+                        <td><input type="text" id="pax" name="pax" value="{{ flight.getPax() }}"></td>
+                        {% else %}
+                        <td>{{ flight.getPax() | default("Solo") }}</td>
+                        {%endif%} 
                         <td>{{ flight.getPricecat() }}</td>
+                        {% if edit ==  flight.getID()  %}
+                        </form>
+                        {%endif%}
                     </tr>
                     {% endfor %}
                 </table>

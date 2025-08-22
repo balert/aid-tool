@@ -242,13 +242,11 @@ class FlightLog:
         grouped = defaultdict(list)
         for flight in self.flights:     
             for person in flight.getCrew():
-                logger.info(person)
+                person = person.strip()
                 if not any(flight.getID() == f.getID() for f in grouped[person]):
                     grouped[person].append(flight)   
             for person in flight.getPax():
-                logger.info(person)
-                logger.info(flight.getID())
-                logger.info(grouped)
+                person = person.strip()
                 if not any(flight.getID() == f.getID() for f in grouped[person]):
                     grouped[person].append(flight)   
         return grouped 

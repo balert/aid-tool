@@ -58,16 +58,19 @@ class Flight():
             return False
         return True
     
-    def getCrew(self) -> str:
+    def getCrew(self):
         crew = FlightLog.remove_html_tags(self.crew)
         crew = re.sub(r'[0-9]+', '', crew)
         crew = crew.split("/")
         crew = [x for x in crew if not "brenner" in x.lower()]
         crew = [x.strip() for x in crew]
-        return crew or "-"
+        return crew or []
     
-    def getPax(self) -> str:
-        return self.getMetadata("pax") or "-"
+    def getPax(self):
+        pax = self.getMetadata("pax")
+        if not pax:
+            return []
+        return pax.split(",")
     
     def getComment(self) -> str:
         return self.getMetadata("comment") or ""
@@ -238,13 +241,16 @@ class FlightLog:
     def get_flights_groupedby_person(self):
         grouped = defaultdict(list)
         for flight in self.flights:     
-            other = FlightLog.remove_html_tags(flight.crew)
-            other = re.sub(r'[0-9]+', '', other)
-            other = other.split("/")
-            other = [x for x in other if not "brenner" in x.lower()]
-            other = [x.strip() for x in other]
-            other = ", ".join(other)
-            grouped[other].append(flight)   
+            # other = FlightLog.remove_html_tags(flight.crew)
+            # other = re.sub(r'[0-9]+', '', other)
+            # other = other.split("/")
+            # other = [x for x in other if not "brenner" in x.lower()]
+            # other = [x.strip() for x in other]
+            # other = ", ".join(other)
+            for person in flight.getCrew():
+                grouped[person].append(flight)   
+            for person in flight.getPax():
+                grouped[person].append(flight)   
         return grouped 
     
     def get_flights_groupedby_month(self, f_aircraft=None, f_pic=False):

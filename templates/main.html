@@ -98,10 +98,10 @@
                     <li>Landings: {{ statistics["landings"] }}</li>
                     <li>Aircraft: {{ statistics["aircraft"] }}</li>
                 </ul>
-                <img src="/graph/bt_ac" style="max-width: 100%; height: auto;">
-                <img src="/graph/bt_ac?pic=1" style="max-width: 100%; height: auto;">
+                <!-- <img src="/graph/bt_ac" style="max-width: 100%; height: auto;"> -->
+                <!-- <img src="/graph/bt_ac?pic=1" style="max-width: 100%; height: auto;"> -->
                 <img src="/graph/other" style="max-width: 100%; height: auto;">
-                <img src="/graph/bt_cs" style="max-width: 100%; height: auto;">
+                <!-- <img src="/graph/bt_cs" style="max-width: 100%; height: auto;"> -->
                 </section>
             </div>
             <div class="column-right" style="padding: 1rem;">
@@ -154,9 +154,9 @@
                         <td>{{ flight.getCrew() | join(", ") }}</td>
                         
                         {% if edit ==  flight.getID()  %}
-                        <td><input type="text" id="pax" name="pax" value="{{ flight.getPax() }}"></td>
+                        <td><input type="text" id="pax" name="pax" value="{{ flight.getPax() | join(", ") }}"></td>
                         {% else %}
-                        <td>{{ flight.getPax() }}<a href="?edit={{ flight.getID() }}#editrow">✏️</a></td>
+                        <td>{{ flight.getPax() | join(", ") }}<a href="?edit={{ flight.getID() }}#editrow">✏️</a></td>
                         {%endif%} 
                         <td>{{ flight.getPricecat() }}</td>
                         {% if edit ==  flight.getID()  %}

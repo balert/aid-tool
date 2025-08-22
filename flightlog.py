@@ -69,6 +69,9 @@ class Flight():
     def getPax(self) -> str:
         return self.getMetadata("pax") or "-"
     
+    def getComment(self) -> str:
+        return self.getMetadata("comment") or ""
+    
     def getPricecat(self) -> str:
         return {
             "Charterflug": "Charter",

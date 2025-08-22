@@ -47,7 +47,7 @@
         li {
             white-space: nowrap;
             font-size: small;
-            padding: 1px ;
+            padding: 3px;
         }
 
         input, button {
@@ -75,6 +75,9 @@
         }
         td.comment, th.comment {
             text-align: left;
+        }
+        tr.even-row td {
+            background-color: #102030;
         }
     </style>
 </head>
@@ -120,7 +123,7 @@
                         <th>Pricecat</th>
                     </tr>
                     {% for flight in flightlog.get_all() %}
-                    <tr>
+                    <tr class="{{ 'even-row' if loop.index is even else 'odd-row' }}">
                         {% if edit ==  flight.getID()  %}
                         <form action="/submit" method="post">
                         <input type="hidden" name="flightid" value="{{ edit }}" />
@@ -137,9 +140,9 @@
                         <td title="{{ flight.departure }}">{{ airports[flight.departure]["name"] | replace("Airport", "" )}}</td>
                         <td title="{{ flight.destination }}">{{ airports[flight.destination]["name"] | replace("Airport", "" )}}</td>
                         {% if edit ==  flight.getID()  %}
-                        <td class="comment"><input type="text" id="comment" name="comment" value="{{ flight.getMetadata('comment') }}"></td>
+                        <td class="comment"><input type="text" id="comment" name="comment" value="{{ flight.getComment() }}"></td>
                         {% else %}
-                        <td class="comment">{{ flight.getMetadata("comment") }}<a href="?edit={{ flight.getID() }}">✏️</a></td>
+                        <td class="comment">{{ flight.getComment() }}<a href="?edit={{ flight.getID() }}">✏️</a></td>
                         {%endif%} 
                         <td title="Block off: {{ flight.blockoff }}">{{ flight.takeoff }}</td>
                         <td title="Block on: {{ flight.blockon }}">{{ flight.landing }}</td>
@@ -151,7 +154,7 @@
                         {% if edit ==  flight.getID()  %}
                         <td><input type="text" id="pax" name="pax" value="{{ flight.getPax() }}"></td>
                         {% else %}
-                        <td>{{ flight.getPax() | default("Solo") }}<a href="?edit={{ flight.getID() }}">✏️</a></td>
+                        <td>{{ flight.getPax() }}<a href="?edit={{ flight.getID() }}">✏️</a></td>
                         {%endif%} 
                         <td>{{ flight.getPricecat() }}</td>
                         {% if edit ==  flight.getID()  %}

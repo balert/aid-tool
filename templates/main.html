@@ -127,9 +127,11 @@
                         {% if edit ==  flight.getID()  %}
                         <form action="/submit" method="post">
                         <input type="hidden" name="flightid" value="{{ edit }}" />
+                        <td id="editrow">
+                        {%else%}
+                        <td>
                         {%endif%} 
 
-                        <td>
                             {% if edit ==  flight.getID()  %}
                             <button type="submit">💾</button>                        
                             {%endif%} 
@@ -142,7 +144,7 @@
                         {% if edit ==  flight.getID()  %}
                         <td class="comment"><input type="text" id="comment" name="comment" value="{{ flight.getComment() }}"></td>
                         {% else %}
-                        <td class="comment">{{ flight.getComment() }}<a href="?edit={{ flight.getID() }}">✏️</a></td>
+                        <td class="comment">{{ flight.getComment() }}<a href="?edit={{ flight.getID() }}#editrow">✏️</a></td>
                         {%endif%} 
                         <td title="Block off: {{ flight.blockoff }}">{{ flight.takeoff }}</td>
                         <td title="Block on: {{ flight.blockon }}">{{ flight.landing }}</td>
@@ -154,7 +156,7 @@
                         {% if edit ==  flight.getID()  %}
                         <td><input type="text" id="pax" name="pax" value="{{ flight.getPax() }}"></td>
                         {% else %}
-                        <td>{{ flight.getPax() }}<a href="?edit={{ flight.getID() }}">✏️</a></td>
+                        <td>{{ flight.getPax() }}<a href="?edit={{ flight.getID() }}#editrow">✏️</a></td>
                         {%endif%} 
                         <td>{{ flight.getPricecat() }}</td>
                         {% if edit ==  flight.getID()  %}

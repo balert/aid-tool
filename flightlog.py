@@ -241,16 +241,16 @@ class FlightLog:
     def get_flights_groupedby_person(self):
         grouped = defaultdict(list)
         for flight in self.flights:     
-            # other = FlightLog.remove_html_tags(flight.crew)
-            # other = re.sub(r'[0-9]+', '', other)
-            # other = other.split("/")
-            # other = [x for x in other if not "brenner" in x.lower()]
-            # other = [x.strip() for x in other]
-            # other = ", ".join(other)
             for person in flight.getCrew():
-                grouped[person].append(flight)   
+                logger.info(person)
+                if not any(flight.getID() == f.getID() for f in grouped[person]):
+                    grouped[person].append(flight)   
             for person in flight.getPax():
-                grouped[person].append(flight)   
+                logger.info(person)
+                logger.info(flight.getID())
+                logger.info(grouped)
+                if not any(flight.getID() == f.getID() for f in grouped[person]):
+                    grouped[person].append(flight)   
         return grouped 
     
     def get_flights_groupedby_month(self, f_aircraft=None, f_pic=False):

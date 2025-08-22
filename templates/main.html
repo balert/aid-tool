@@ -112,6 +112,7 @@
                         <th>Departure</th>
                         <th>Destination</th>
                         <th class="comment">Comment</th>
+                        <th class="comment">Metadata</th>
                         <th>Takeoff</th>
                         <th>Landing</th>
                         <th>Landings</th>
@@ -121,19 +122,24 @@
                         <th>Pax</th>
                         <th>Pricecat</th>
                     </tr>
-                    {% for flight in data %}
+                    {% for flight in flightlog.get_all() %}
                     <tr>
-                        <td><a href="/flight/{{ flight.tenant }}-{{ flight.id }}">{{ flight.tenant[:3] }} {{ flight.id }}</a></td>
+                        <td><a href="/flight/{{ flight.getID() }}">{{ flight.tenant[:3] }} {{ flight.id }}</a></td>
                         <td>{{ flight.date.strftime('%d.%m.%Y') }}</td>
                         <td>{{ flight.actype }} ({{ flight.callsign }})</td>
                         <td title="{{ flight.departure }}">{{ airports[flight.departure]["name"] | replace("Airport", "" )}}</td>
                         <td title="{{ flight.destination }}">{{ airports[flight.destination]["name"] | replace("Airport", "" )}}</td>
                         {% if edit ==  flight.tenant ~ "-" ~ flight.id  %}
                         <form action="/submit" method="post">
-                            <td class="comment"><input type="text" id="comment" name="comment" value="{{ comments[flight.tenant ~ "-" ~ flight.id] }}" required><input type="hidden" name="id" value="{{ edit }}" /><button type="submit">Submit</button></td>
+                            <td class="comment">
+                                <input type="text" id="comment" name="comment" value="{{ comments[flight.getID()] }}">
+                                <input type="hidden" name="flightid" value="{{ edit }}" />
+                                <button type="submit">Submit</button>
+                            </td>
                         </form>
                         {% else %}
-                        <td class="comment">{{ comments[flight.tenant ~ "-" ~ flight.id] }}<a href="?edit={{ flight.tenant }}-{{ flight.id }}">✏️</a></td>
+                        <td class="comment">{{ comments[flight.getID()] }}<a href="?edit={{ flight.getID() }}">✏️</a></td>
+                        <td class="comment">{{ flight.getMetadata("comment") }}</td>
                         {%endif%} 
                         <td title="Block off: {{ flight.blockoff }}">{{ flight.takeoff }}</td>
                         <td title="Block on: {{ flight.blockon }}">{{ flight.landing }}</td>

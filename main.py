@@ -107,16 +107,20 @@ async def root(request: Request, edit: Optional[str] = None):
             delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
             time += delta
         blocktimes[k] = time
-    if len(blocktimes) > 0:
+    if len(blocktimes) > 0: 
         stat["avg_blocktime_month"] = round(pandas.Series(blocktimes.values()).mean().total_seconds()/3600,1)
     
     return templates.TemplateResponse(
-        request=request, name="main.html", context={"data": flightlog.flights, "statistics": stat, "edit": edit, "comments": comments.data, "airports": airports}
+        request=request, name="main.html", context={"flightlog": flightlog, "statistics": stat, "edit": edit, "comments": comments.data, "airports": airports}
     )
     
 @app.post("/submit")
 async def submit(request: Request, flightid: str = Form(), comment: str = Form()):
     logger.info(f"{flightid}: {comment}")
+    
+    flightlog = FlightLog.virtual(tenants)
+    flightlog.add_metadata(flightid, "comment", comment)
+    
     comments = FlightComments()
     comments.set_comment(flightid, comment)
     comments.save()

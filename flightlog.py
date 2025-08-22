@@ -20,7 +20,8 @@ class DateTimeEncoder(json.JSONEncoder):
         return super().default(obj)
 
 class Flight():
-    def __init__(self, tenant, data):
+    def __init__(self, parent, tenant, data):
+        self.parent = parent
         self.tenant = tenant
         self.id = data['flightid']
         self.sortval = data["flightdate"]["sortval"]
@@ -72,6 +73,12 @@ class Flight():
             "Check-/Einweisungs-/&Uuml;bungsflug": "Check/Einw.",
             "Charterflug mit Kurzfristbuchungsrabatt": "Kurzfristrabatt" 
         }.get(self.pricecat, self.pricecat)
+        
+    def getMetadata(self, attr: str):
+        meta = self.parent.get_metadata(self.getID())
+        if meta:
+            return meta[attr]
+        return None
 
 class FlightLog():
     acc_blocktime = None 
@@ -101,6 +108,31 @@ class FlightLog():
         flightlog.load_tenant()
         return flightlog
     
+    def __init__(self):
+        self.metafilename = "metadata.dat"
+        if os.path.exists(self.metafilename):
+            with open(self.metafilename, "r") as f:
+                file_contents = f.read()
+                if len(file_contents) > 0:
+                    self.metadata = json.loads(file_contents)
+                    return
+        self.metadata = defaultdict()
+    
+    def add_metadata(self, flightid: str, attribute: str, value: str):
+        if not flightid in self.metadata:
+            self.metadata[flightid] = dict()
+        self.metadata[flightid][attribute] = value
+        self.write_metadata()
+        
+    def get_metadata(self, flightid: str):
+        if not flightid in self.metadata:
+            return None
+        return self.metadata[flightid]
+        
+    def write_metadata(self):
+        with open(self.metafilename, "w") as f:
+            f.write(json.dumps(self.metadata))
+    
     def __str__(self):
         tenant = self.tenant["name"] if "name" in self.tenant else "n/a"
         base = f"File <{tenant}>" if self.tenant else "Virtual"
@@ -115,15 +147,13 @@ class FlightLog():
                 if len(file_contents) > 0:
                     self.data = json.loads(file_contents)
                     self.process()
-                else: 
-                    self.data = list()
-        else:
-            self.data = list()
+                    return
+        self.data = list()
     
     def process(self):
         self.flights = []
         for flight in self.data:
-            self.flights.append(Flight(self.tenant, flight))
+            self.flights.append(Flight(self, self.tenant, flight))
         self.min = min(self.flights, key=lambda x: x.sortval)
         self.max = max(self.flights, key=lambda x: x.sortval)
     

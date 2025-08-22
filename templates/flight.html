@@ -32,11 +32,22 @@
 
 <body>
   <table>
-    {% for key, value in flight.items() %}
     <tr>
-      <td>{{ key }}</td>
-      <td>{{ value }}</td>
+      <td>Flight ID</td>
+      <td>{{ flight.tenant }}-{{ flight.id }} </td>
     </tr>
-    {% endfor %}
+    <tr>
+      <td>Route</td>
+      <td>{{ flight.departure }}-{{ flight.destination }} </td>
+    </tr>
+    <tr>
+      <td>Blocktime</td>
+      <td>{{ flight.blockoff }}-{{ flight.blockon }} </td>
+    </tr>
+    <tr>
+      <td>Airtime</td>
+      <td>{{ flight.takeoff }}-{{ flight.landing }} </td>
+    </tr>
+    
   </table>
 </body>

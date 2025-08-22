@@ -36,12 +36,12 @@ airports = airportsdata.load()
 
 def refresh_data():
     for tenant in tenants:
-        flightlog = FlightLog(tenant['name'])
+        flightlog = FlightLog.file(tenant['name'])
         
         flights = flightlog.get_all()
         if len(flights) > 0:
-            maxDate = max(flights, key=lambda x: x["flightdate"]["sortval"])
-            maxDate = datetime.datetime.fromtimestamp(maxDate["flightdate"]["sortval"])
+            maxDate = max(flights, key=lambda x: x.sortval)
+            maxDate = datetime.datetime.fromtimestamp(maxDate.sortval)
             
             since = maxDate.strftime("%d.%m.%Y")
         else: 
@@ -54,24 +54,16 @@ def refresh_data():
         aid = AID(tenant['name'],tenant['username'],tenant['password'])
         ret = aid.get_flightlog(since, until)
         
-        for flight in ret['data']:
-            flight['tenant'] = tenant['name']
-
         flightlog.store(ret['data'])
-    logger.info("Merging data...")
-    merge_data()
-
-def flight_id(flight):
-    return "%s%s" % (flight['tenant'], flight['flightid'])
 
 def flight_notesId(flight):
-    date = datetime.datetime.fromtimestamp(flight['flightdate']['sortval'], datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S') 
-    return "%s %10s #%s %s %s>>>%s" % (date, flight['tenant'], flight['flightid'], flight['callsign'], flight['departure'], flight['destination'])
+    date = datetime.datetime.fromtimestamp(flight.sortval, datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S') 
+    return "%s %10s #%s %s %s>>>%s" % (date, flight.tenant, flight.id, flight.callsign, flight.departure, flight.destination)
 
 def flight_toString(flight, notes=""):
-    date = datetime.datetime.fromtimestamp(flight['flightdate']['sortval'], datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S') 
-    crew = re.sub(r'<[^>]+>', '', flight['crew'])
-    return "%s %s [%s>>>%s] (%s) [%10s #%s] %25s | %s" % (flight['callsign'], date, flight['departure'], flight['destination'], flight['airtime'], flight['tenant'], flight['flightid'], crew, notes.strip())
+    date = datetime.datetime.fromtimestamp(flight.sortval, datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S') 
+    crew = re.sub(r'<[^>]+>', '', flight.crew)
+    return "%s %s [%s>>>%s] (%s) [%10s #%s] %25s | %s" % (flight.callsign, date, flight.departure, flight.destination, flight.airtime, flight.tenant, flight.flightid, crew, notes.strip())
 
 def display_data(tenant=None):
     if tenant == None:
@@ -80,19 +72,6 @@ def display_data(tenant=None):
     notes = Notes(notesfilename)
     for flight in FlightLog(tenant).get():
         print(flight_toString(flight, notes.get(flight_notesId(flight))))
-
-def merge_data():
-    notes = Notes(notesfilename)
-    merged = FlightLog('merged')
-    for tenant in tenants:
-        flightlog = FlightLog(tenant['name'])
-        data = flightlog.get_all()
-        for flight in data:
-            flight['tenant'] = tenant['name']
-            notes.insert(flight_notesId(flight))
-        merged.store(data)
-    merged.sort()
-    notes.write()
     
 def timedelta_toString(delta : datetime.timedelta) -> str:
     total_minutes = int(delta.total_seconds() // 60)
@@ -105,9 +84,7 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
 async def root(request: Request, edit: Optional[str] = None):
-    flightlog = FlightLog()
-    data = flightlog.get_all()
-    data.reverse()
+    flightlog = FlightLog.virtual(tenants)
     
     comments = FlightComments()
 
@@ -126,7 +103,7 @@ async def root(request: Request, edit: Optional[str] = None):
     for k,v in grouped.items():
         time = datetime.timedelta(0)
         for flight in v:
-            blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+            blocktime = datetime.datetime.strptime(flight.blocktime, "%H:%M")
             delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
             time += delta
         blocktimes[k] = time
@@ -134,7 +111,7 @@ async def root(request: Request, edit: Optional[str] = None):
         stat["avg_blocktime_month"] = round(pandas.Series(blocktimes.values()).mean().total_seconds()/3600,1)
     
     return templates.TemplateResponse(
-        request=request, name="main.html", context={"data": data, "statistics": stat, "edit": edit, "comments": comments.data, "airports": airports}
+        request=request, name="main.html", context={"data": flightlog.flights, "statistics": stat, "edit": edit, "comments": comments.data, "airports": airports}
     )
     
 @app.post("/submit")
@@ -147,12 +124,10 @@ async def submit(request: Request, flightid: str = Form(), comment: str = Form()
     
 @app.get("/flight/{flight_id}")
 async def get_flight(request: Request, flight_id: str):
-    flightlog = FlightLog()
-    flightdata = flightlog.get_flight(flight_id)
-    for k,v in flightdata.items():
-        logger.info(f"{k}: {v}")
+    flightlog = FlightLog.virtual(tenants)
+    flight = flightlog.get_flight(flight_id)
     return templates.TemplateResponse(
-        request=request, name="flight.html", context={"flight": flightdata}
+        request=request, name="flight.html", context={"flight": flight}
     )
 
 @app.get("/refresh")
@@ -221,7 +196,7 @@ async def get_graph_blocktimes(request: Request, aircraft : str = None):
     for k,v in grouped.items():
         time = datetime.timedelta(0)
         for flight in v:
-            blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+            blocktime = datetime.datetime.strptime(flight.blocktime, "%H:%M")
             delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
             time += delta
         blocktimes[k] = time
@@ -241,7 +216,7 @@ async def get_graph_other(request: Request, stacked : bool = True):
     for person, data in grouped.items():
         time = datetime.timedelta(0)
         for flight in data:
-            blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+            blocktime = datetime.datetime.strptime(flight.blocktime, "%H:%M")
             delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
             time += delta
         person = "Nicht-FFG" if len(person) <= 0 else person
@@ -266,8 +241,8 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
         for month in all_months:
             time = datetime.timedelta(0)
             for flight in grouped[month.year,month.month]:
-                if flight["actype"] == ac:
-                    blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+                if flight.actype == ac:
+                    blocktime = datetime.datetime.strptime(flight.blocktime, "%H:%M")
                     delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
                     time += delta
             data[ac].append(time.total_seconds()/3600)
@@ -288,8 +263,8 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
         for month in all_months:
             time = datetime.timedelta(0)
             for flight in grouped[month.year,month.month]:
-                if flight["callsign"] == ac:
-                    blocktime = datetime.datetime.strptime(flight["blocktime"], "%H:%M")
+                if flight.callsign == ac:
+                    blocktime = datetime.datetime.strptime(flight.blocktime, "%H:%M")
                     delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
                     time += delta
             data[ac].append(time.total_seconds()/3600)

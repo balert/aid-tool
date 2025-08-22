@@ -95,10 +95,10 @@
                     <li>Landings: {{ statistics["landings"] }}</li>
                     <li>Aircraft: {{ statistics["aircraft"] }}</li>
                 </ul>
-                <img src="/graph/bt_ac" style="max-width: 100%; height: auto;">
+                <!-- <img src="/graph/bt_ac" style="max-width: 100%; height: auto;">
                 <img src="/graph/bt_ac?pic=1" style="max-width: 100%; height: auto;">
                 <img src="/graph/other" style="max-width: 100%; height: auto;">
-                <img src="/graph/bt_cs" style="max-width: 100%; height: auto;">
+                <img src="/graph/bt_cs" style="max-width: 100%; height: auto;"> -->
                 </section>
             </div>
             <div class="column-right" style="padding: 1rem;">
@@ -123,26 +123,26 @@
                     </tr>
                     {% for flight in data %}
                     <tr>
-                        <td><a href="/flight/{{ flight.tenant }}-{{ flight.flightid }}">{{ flight.tenant[:3] }} {{ flight.flightid }}</a></td>
+                        <td><a href="/flight/{{ flight.tenant }}-{{ flight.id }}">{{ flight.tenant[:3] }} {{ flight.id }}</a></td>
                         <td>{{ flight.date.strftime('%d.%m.%Y') }}</td>
                         <td>{{ flight.actype }} ({{ flight.callsign }})</td>
                         <td title="{{ flight.departure }}">{{ airports[flight.departure]["name"] | replace("Airport", "" )}}</td>
                         <td title="{{ flight.destination }}">{{ airports[flight.destination]["name"] | replace("Airport", "" )}}</td>
-                        {% if edit ==  flight.tenant ~ "-" ~ flight.flightid  %}
+                        {% if edit ==  flight.tenant ~ "-" ~ flight.id  %}
                         <form action="/submit" method="post">
-                            <td class="comment"><input type="text" id="comment" name="comment" value="{{ comments[flight.tenant ~ "-" ~ flight.flightid] }}" required><input type="hidden" name="flightid" value="{{ edit }}" /><button type="submit">Submit</button></td>
+                            <td class="comment"><input type="text" id="comment" name="comment" value="{{ comments[flight.tenant ~ "-" ~ flight.id] }}" required><input type="hidden" name="id" value="{{ edit }}" /><button type="submit">Submit</button></td>
                         </form>
                         {% else %}
-                        <td class="comment">{{ comments[flight.tenant ~ "-" ~ flight.flightid] }}<a href="?edit={{ flight.tenant }}-{{ flight.flightid }}">✏️</a></td>
+                        <td class="comment">{{ comments[flight.tenant ~ "-" ~ flight.id] }}<a href="?edit={{ flight.tenant }}-{{ flight.id }}">✏️</a></td>
                         {%endif%} 
                         <td title="Block off: {{ flight.blockoff }}">{{ flight.takeoff }}</td>
                         <td title="Block on: {{ flight.blockon }}">{{ flight.landing }}</td>
                         <td>{{ flight.landings }}</td>
                         <td title="Blocktime: {{ flight.blocktime }}">{{ flight.airtime }}</td>
-                        <td>{{ "&#x1F7E2;" | safe if flight.pic else "&#x1F534;" | safe }}</td>
-                        <td>{{ flight.crew }}</td>
+                        <td>{{ "&#x1F7E2;" | safe if flight.isPIC() else "&#x1F534;" | safe }}</td>
+                        <td>{{ flight.getCrew() | join(", ") }}</td>
                         <td>{{ flight.pax }}</td>
-                        <td>{{ flight.pricecat[:24] }}</td>
+                        <td>{{ flight.getPricecat() }}</td>
                     </tr>
                     {% endfor %}
                 </table>

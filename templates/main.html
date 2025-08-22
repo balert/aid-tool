@@ -128,9 +128,7 @@
 
                         <td>
                             {% if edit ==  flight.getID()  %}
-                            <button type="submit">💾</button>
-                            {%else%}
-                            <a href="?edit={{ flight.getID() }}">✏️</a>
+                            <button type="submit">💾</button>                        
                             {%endif%} 
                             <a href="/flight/{{ flight.getID() }}">{{ flight.tenant[:3] }} {{ flight.id }}</a>
                         </td>
@@ -141,7 +139,7 @@
                         {% if edit ==  flight.getID()  %}
                         <td class="comment"><input type="text" id="comment" name="comment" value="{{ flight.getMetadata('comment') }}"></td>
                         {% else %}
-                        <td class="comment">{{ flight.getMetadata("comment") }}</td>
+                        <td class="comment">{{ flight.getMetadata("comment") }}<a href="?edit={{ flight.getID() }}">✏️</a></td>
                         {%endif%} 
                         <td title="Block off: {{ flight.blockoff }}">{{ flight.takeoff }}</td>
                         <td title="Block on: {{ flight.blockon }}">{{ flight.landing }}</td>
@@ -153,7 +151,7 @@
                         {% if edit ==  flight.getID()  %}
                         <td><input type="text" id="pax" name="pax" value="{{ flight.getPax() }}"></td>
                         {% else %}
-                        <td>{{ flight.getPax() | default("Solo") }}</td>
+                        <td>{{ flight.getPax() | default("Solo") }}<a href="?edit={{ flight.getID() }}">✏️</a></td>
                         {%endif%} 
                         <td>{{ flight.getPricecat() }}</td>
                         {% if edit ==  flight.getID()  %}

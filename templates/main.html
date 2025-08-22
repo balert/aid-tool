@@ -139,7 +139,7 @@
                         <td title="{{ flight.departure }}">{{ airports[flight.departure]["name"] | replace("Airport", "" )}}</td>
                         <td title="{{ flight.destination }}">{{ airports[flight.destination]["name"] | replace("Airport", "" )}}</td>
                         {% if edit ==  flight.getID()  %}
-                        <td class="comment"><input type="text" id="comment" name="comment" value="{{ comments[flight.getID()] }}"></td>
+                        <td class="comment"><input type="text" id="comment" name="comment" value="{{ flight.getMetadata('comment') }}"></td>
                         {% else %}
                         <td class="comment">{{ flight.getMetadata("comment") }}</td>
                         {%endif%} 

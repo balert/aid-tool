@@ -36,9 +36,18 @@ airports = airportsdata.load()
 
 def refresh_data():
     for tenant in tenants:
-        currentyear = datetime.datetime.now().year
-        since = "%s-01-01" % (currentyear - 1)
-        until = "%s-01-01" % (currentyear + 1)
+        flightlog = FlightLog(tenant['name'])
+        
+        flights = flightlog.get_all()
+        if len(flights) > 0:
+            maxDate = max(flights, key=lambda x: x["flightdate"]["sortval"])
+            maxDate = datetime.datetime.fromtimestamp(maxDate["flightdate"]["sortval"])
+            
+            since = maxDate.strftime("%d.%m.%Y")
+        else: 
+            since = "1950-01-01" 
+        
+        until = datetime.datetime.now().strftime("%d.%m.%Y")
         
         logger.info("Refreshing %s from %s till %s" % (tenant['name'], since, until))
         
@@ -48,9 +57,8 @@ def refresh_data():
         for flight in ret['data']:
             flight['tenant'] = tenant['name']
 
-        flightlog = FlightLog(tenant['name'])
         flightlog.store(ret['data'])
-    logger.info("Mergin data...")
+    logger.info("Merging data...")
     merge_data()
 
 def flight_id(flight):
@@ -195,7 +203,7 @@ def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = Non
     plt.setp(ax.xaxis.get_minorticklabels(), rotation=90)
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=90)
     if legend:
-        fig.legend()
+        fig.legend(loc="upper left", bbox_to_anchor=(0.05, 0.95))
 
     buf = io.BytesIO()
     fig.savefig(buf, format='png')

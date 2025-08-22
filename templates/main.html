@@ -107,7 +107,6 @@
             <div class="column-right" style="padding: 1rem;">
                 <table>
                     <tr>
-                        <th>ID</th>
                         <th>Date</th>
                         <th>Aircraft</th>
                         <th>Departure</th>
@@ -127,6 +126,7 @@
                         {% if edit ==  flight.getID()  %}
                         <form action="/submit" method="post">
                         <input type="hidden" name="flightid" value="{{ edit }}" />
+                        
                         <td id="editrow">
                         {%else%}
                         <td>
@@ -135,9 +135,9 @@
                             {% if edit ==  flight.getID()  %}
                             <button type="submit">💾</button>                        
                             {%endif%} 
-                            <a href="/flight/{{ flight.getID() }}">{{ flight.tenant[:3] }} {{ flight.id }}</a>
+                            <a href="/flight/{{ flight.getID() }}">{{ flight.date.strftime('%d.%m.%Y') }}</a>
                         </td>
-                        <td>{{ flight.date.strftime('%d.%m.%Y') }}</td>
+
                         <td>{{ flight.actype }} ({{ flight.callsign }})</td>
                         <td title="{{ flight.departure }}">{{ airports[flight.departure]["name"] | replace("Airport", "" )}}</td>
                         <td title="{{ flight.destination }}">{{ airports[flight.destination]["name"] | replace("Airport", "" )}}</td>

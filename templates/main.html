@@ -144,7 +144,7 @@
                         {% if edit ==  flight.getID()  %}
                         <td class="comment"><input type="text" id="comment" name="comment" value="{{ flight.getComment() }}"></td>
                         {% else %}
-                        <td class="comment">{{ flight.getComment() }}<a href="?edit={{ flight.getID() }}#editrow">✏️</a></td>
+                        <td class="comment" title="{{ flight.getComment() }}">{{ flight.getComment()[:32] }}<a href="?edit={{ flight.getID() }}#editrow">✏️</a></td>
                         {%endif%} 
                         <td title="Block off: {{ flight.blockoff }}">{{ flight.takeoff }}</td>
                         <td title="Block on: {{ flight.blockon }}">{{ flight.landing }}</td>

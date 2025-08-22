@@ -47,7 +47,17 @@
         li {
             white-space: nowrap;
             font-size: small;
-            padding: 1px;
+            padding: 1px ;
+        }
+
+        input, button {
+            padding: 3px !important; /* Overrides PicoCSS default */
+            font-size: small !important;
+            height: auto !important;
+            line-height: normal !important;
+            width: fit-content !important;
+            vertical-align: middle !important;
+            margin-right: 5px;
         }
 
         table,
@@ -74,7 +84,7 @@
         <div class="row">
             
             <div class="column-left" style="padding: 1rem;">
-                <h1>FlightLog</h1>
+                <h1><a href="/">FlightLog</a></h1>
                 <ul>
                     <li>Tracked Flights: {{ statistics["noflights"] }}</li>
                     <li>Blocktime: {{ statistics["blocktime"] }}h</li>
@@ -101,14 +111,15 @@
                         <th>Aircraft</th>
                         <th>Departure</th>
                         <th>Destination</th>
+                        <th class="comment">Comment</th>
                         <th>Takeoff</th>
                         <th>Landing</th>
                         <th>Landings</th>
                         <th>Airtime</th>
                         <th>PIC</th>
                         <th>Crew</th>
+                        <th>Pax</th>
                         <th>Pricecat</th>
-                        <th class="comment">Comment</th>
                     </tr>
                     {% for flight in data %}
                     <tr>
@@ -117,20 +128,21 @@
                         <td>{{ flight.actype }} ({{ flight.callsign }})</td>
                         <td title="{{ flight.departure }}">{{ airports[flight.departure]["name"] | replace("Airport", "" )}}</td>
                         <td title="{{ flight.destination }}">{{ airports[flight.destination]["name"] | replace("Airport", "" )}}</td>
+                        {% if edit ==  flight.tenant ~ "-" ~ flight.flightid  %}
+                        <form action="/submit" method="post">
+                            <td class="comment"><input type="text" id="comment" name="comment" value="{{ comments[flight.tenant ~ "-" ~ flight.flightid] }}" required><input type="hidden" name="flightid" value="{{ edit }}" /><button type="submit">Submit</button></td>
+                        </form>
+                        {% else %}
+                        <td class="comment">{{ comments[flight.tenant ~ "-" ~ flight.flightid] }}<a href="?edit={{ flight.tenant }}-{{ flight.flightid }}">✏️</a></td>
+                        {%endif%} 
                         <td title="Block off: {{ flight.blockoff }}">{{ flight.takeoff }}</td>
                         <td title="Block on: {{ flight.blockon }}">{{ flight.landing }}</td>
                         <td>{{ flight.landings }}</td>
                         <td title="Blocktime: {{ flight.blocktime }}">{{ flight.airtime }}</td>
                         <td>{{ "&#x1F7E2;" | safe if flight.pic else "&#x1F534;" | safe }}</td>
-                        <td>{{ flight.persons }}</td>
+                        <td>{{ flight.crew }}</td>
+                        <td>{{ flight.pax }}</td>
                         <td>{{ flight.pricecat[:24] }}</td>
-                        {% if edit ==  flight.tenant ~ "-" ~ flight.flightid  %}
-                        <form action="/submit" method="post">
-                            <td class="comment"><input type="text" id="comment" name="comment" required><input type="hidden" name="flightid" value="{{ edit }}" /><button type="submit">Submit</button></td>
-                        </form>
-                        {% else %}
-                        <td class="comment">{{ comments[flight.tenant ~ "-" ~ flight.flightid] }}<a href="?edit={{ flight.tenant }}-{{ flight.flightid }}">✏️</a></td>
-                        {%endif%} 
                     </tr>
                     {% endfor %}
                 </table>

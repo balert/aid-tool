@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging, re, json, os
 import datetime
+from dateutil.relativedelta import relativedelta
 import math
 from fastapi import FastAPI, Request, Response, Form
 from fastapi.responses import RedirectResponse
@@ -96,18 +97,34 @@ async def root(request: Request, edit: Optional[str] = None):
     stat["aircraft"] = ", ".join(flightlog.get_aircraft_types())
     stat["noflights"] = len(flightlog.get_all())
     
-    # average blocktime
-    _, grouped = flightlog.get_flights_groupedby_month()
-    blocktimes = defaultdict(datetime.timedelta)
-    for k,v in grouped.items():
+    now = datetime.datetime.now()
+    max_delta = relativedelta(now, flightlog.min.date)
+    alltime = max_delta.years*12+max_delta.months+1
+
+    stat["avg_blocktimes"] = list()
+    stat["avg_pictimes"] = list()
+    stat["avg_dualtimes"] = list()
+    
+    for x in [alltime,12,6,3,1]:
+        from_date = now - relativedelta(months=x)
+        flights = flightlog.get_flights_by_date_period(from_date, now)
         time = datetime.timedelta(0)
-        for flight in v:
-            blocktime = datetime.datetime.strptime(flight.blocktime, "%H:%M")
-            delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
-            time += delta
-        blocktimes[k] = time
-    if len(blocktimes) > 0: 
-        stat["avg_blocktime_month"] = round(pandas.Series(blocktimes.values()).mean().total_seconds()/3600,1)
+        pictime = datetime.timedelta(0)
+        dualtime = datetime.timedelta(0)
+        for flight in flights:
+            time += flight.getBlocktime()
+            if flight.isPIC():
+                pictime += flight.getBlocktime()
+            if not flight.isPIC():
+                dualtime += flight.getBlocktime()
+                
+        average = f"{int(time.total_seconds()/x//3600)}:{int(time.total_seconds()/x%3600//60):02d}"
+        picaverage = f"{int(pictime.total_seconds()/x//3600)}:{int(pictime.total_seconds()/x%3600//60):02d}"
+        dualaverage = f"{int(dualtime.total_seconds()/x//3600)}:{int(dualtime.total_seconds()/x%3600//60):02d}"
+        
+        stat["avg_blocktimes"].append(average)
+        stat["avg_pictimes"].append(picaverage)
+        stat["avg_dualtimes"].append(dualaverage)
     
     return templates.TemplateResponse(
         request=request, name="main.html", context={"flightlog": flightlog, "statistics": stat, "edit": edit, "airports": airports}

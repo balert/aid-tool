@@ -90,10 +90,24 @@
                 <h1><a href="/">FlightLog</a> <a href="/refresh">&#x1F501;</a></h1>
                 <ul>
                     <li>Tracked Flights: {{ statistics["noflights"] }}</li>
-                    <li>Blocktime: {{ statistics["blocktime"] }}h</li>
-                    <li>Avg. month blocktime: {{ statistics["avg_blocktime_month"] }}h</li>
-                    <li>Blocktime (PIC): {{ statistics["blocktime_pic"] }}h</li>
-                    <li>Blocktime (Dual): {{ statistics["blocktime_dual"] }}h</li>
+                    <li>Blocktime: {{ statistics["blocktime"] }}h 
+                        (Average: all time: {{ statistics["avg_blocktimes"][0] }}h | 
+                        12 months: {{ statistics["avg_blocktimes"][1] }}h | 
+                        6 months: {{ statistics["avg_blocktimes"][2] }}h | 
+                        3 months: {{ statistics["avg_blocktimes"][3] }}h | 
+                        1 month: {{ statistics["avg_blocktimes"][4] }}h)</li>
+                    <li>Blocktime (PIC): {{ statistics["blocktime_pic"] }}h 
+                        (Average: all time: {{ statistics["avg_pictimes"][0] }}h | 
+                        12 months: {{ statistics["avg_pictimes"][1] }}h | 
+                        6 months: {{ statistics["avg_pictimes"][2] }}h | 
+                        3 months: {{ statistics["avg_pictimes"][3] }}h | 
+                        1 month: {{ statistics["avg_pictimes"][4] }}h)</li>
+                    <li>Blocktime (Dual): {{ statistics["blocktime_dual"] }}h 
+                        (Average: all time: {{ statistics["avg_dualtimes"][0] }}h | 
+                        12 months: {{ statistics["avg_dualtimes"][1] }}h | 
+                        6 months: {{ statistics["avg_dualtimes"][2] }}h | 
+                        3 months: {{ statistics["avg_dualtimes"][3] }}h | 
+                        1 month: {{ statistics["avg_dualtimes"][4] }}h)</li>
                     <li>Airtime: {{ statistics["airtime"] }}h</li>
                     <li>Landings: {{ statistics["landings"] }}</li>
                     <li>Aircraft: {{ statistics["aircraft"] }}</li>

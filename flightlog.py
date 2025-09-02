@@ -88,6 +88,10 @@ class Flight():
         if meta and attr in meta:
             return meta[attr]
         return None
+    
+    def getBlocktime(self) -> datetime.timedelta:
+        (hours, minutes) = self.blocktime.split(":")
+        return datetime.timedelta(hours=int(hours), minutes=int(minutes))
 
 class Metadata:
     def __init__(self):
@@ -272,6 +276,13 @@ class FlightLog:
             len(grouped[month.year,month.month])
             
         return (all_months, dict(sorted(grouped.items())))
+    
+    def get_flights_by_date_period(self, date_from: datetime.datetime, date_till: datetime.datetime) -> list:
+        results = list()
+        for flight in self.flights:
+            if flight.date > date_from and flight.date < date_till:
+                results.append(flight)
+        return results
     
     def get_aircraft_types(self):
         aircraft = set()

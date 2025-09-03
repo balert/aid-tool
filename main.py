@@ -4,7 +4,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import math
 from fastapi import FastAPI, Request, Response, Form
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -12,6 +12,7 @@ import io
 from collections import defaultdict
 import pandas
 from typing import Optional, Union
+from pathlib import Path
 
 from config import *
 from aid import AID
@@ -152,9 +153,16 @@ async def get_flight(request: Request, flight_id: str):
 async def root(request: Request):
     logger.info("refreshing data...")
     refresh_data()
+    for p in Path(".").glob("graph-*.png"):
+        p.unlink()
     return RedirectResponse(url="/")
 
 def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = None, ylabel : str = None, stacked : bool = True, barwidth : float = 0.9, legend : bool = True, xdates : bool = False) -> Response:
+    filename = f"graph-{title.replace(' ', '-').replace('/', '-').lower()}.png"
+    
+    if os.path.exists(filename):
+        return FileResponse(filename)
+    
     fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
     
     if xdates:
@@ -201,6 +209,9 @@ def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = Non
     buf = io.BytesIO()
     fig.savefig(buf, format='png')
     buf.seek(0) 
+    
+    with open(filename, 'wb') as file:
+        file.write(buf.getbuffer())
 
     return Response(content=buf.read(), media_type="image/png")
 

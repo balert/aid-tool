@@ -135,7 +135,7 @@ async def root(request: Request, edit: Optional[str] = None):
 async def submit(request: Request, flightid: str = Form(), comment: str = Form(), pax: str = Form()):
     logger.info(f"{flightid}: {comment}")
     
-    flightlog = FlightLog.virtual(tenants, metadata)
+    flightlog = FlightLog.virtual(tenants, metadata, airports)
     flightlog.metadata.add_metadata(flightid, "comment", comment)
     flightlog.metadata.add_metadata(flightid, "pax", pax)
     

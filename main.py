@@ -39,7 +39,7 @@ metadata = Metadata()
 
 def refresh_data():
     for tenant in tenants:
-        flightlog = FlightLog.file(tenant['name'], metadata)
+        flightlog = FlightLog.file(tenant['name'], metadata, airports)
         
         flights = flightlog.get_all()
         if len(flights) > 0:

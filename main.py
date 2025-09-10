@@ -213,7 +213,7 @@ def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = Non
     with open(filename, 'wb') as file:
         file.write(buf.getbuffer())
 
-    return FileResponse(content=buf.read(), media_type="image/png", headers={
+    return Response(content=buf.read(), media_type="image/png", headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
             "Pragma": "no-cache",
             "Expires": "0"})

@@ -4,6 +4,7 @@ from collections import defaultdict
 import pandas
 import typing
 import re
+from astral.sun import Observer, sun
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,7 +21,7 @@ class DateTimeEncoder(json.JSONEncoder):
         return super().default(obj)
 
 class Flight():
-    def __init__(self, metadata, tenant, data):
+    def __init__(self, metadata, tenant, data, airports):
         self.metadata = metadata
         self.tenant = tenant
         self.id = data['flightid']
@@ -39,6 +40,7 @@ class Flight():
         self.airtime = data['airtime']
         self.blocktime = data['blocktime']
         self.pricecat = data['pricecat']
+        self.airports = airports
     
     def getID(self) -> str:
         return str(f"{self.tenant}-{self.id}")
@@ -92,6 +94,19 @@ class Flight():
     def getBlocktime(self) -> datetime.timedelta:
         (hours, minutes) = self.blocktime.split(":")
         return datetime.timedelta(hours=int(hours), minutes=int(minutes))
+    
+    def isNight(self) -> str:
+        departure = self.airports[self.departure]
+        destination = self.airports[self.destination]
+        sun_dep = sun(Observer(departure['lat'], departure['lon'], departure['elevation']/3.28084), self.date)
+        sun_dest = sun(Observer(destination['lat'], destination['lon'], destination['elevation']/3.28084), self.date)
+        
+        blockoff = datetime.datetime.strptime(self.blockoff, "%H:%M").replace(year=self.date.year,month=self.date.month,day=self.date.day,tzinfo=datetime.timezone.utc)
+        blockon = datetime.datetime.strptime(self.blockon, "%H:%M").replace(year=self.date.year,month=self.date.month,day=self.date.day,tzinfo=datetime.timezone.utc)
+
+        if blockoff > sun_dep['dusk'] and blockon > sun_dest['dusk']:
+            return True
+        return False
 
 class Metadata:
     def __init__(self):
@@ -130,11 +145,12 @@ class FlightLog:
     landings = None
     flights = list()
 
-    def virtual(tenants, metadata):
+    def virtual(tenants, metadata, airports):
         flightlog = FlightLog()
         flightlog.metadata = metadata
+        flightlog.airports = airports
         for t in tenants:
-            tenant = FlightLog.file(t["name"], metadata)
+            tenant = FlightLog.file(t["name"], metadata, airports)
             flightlog.virtual_insert(tenant.get_all())
         return flightlog 
     
@@ -146,9 +162,10 @@ class FlightLog:
         self.min = min(self.flights, key=lambda x: x.sortval)
         self.max = max(self.flights, key=lambda x: x.sortval)
     
-    def file(tenant: str, metadata):
+    def file(tenant: str, metadata, airports):
         flightlog = FlightLog()
         flightlog.metadata = metadata
+        flightlog.airports = airports
         flightlog.tenant = tenant
         flightlog.load_tenant()
         return flightlog
@@ -173,7 +190,7 @@ class FlightLog:
     def process(self):
         self.flights = []
         for flight in self.data:
-            self.flights.append(Flight(self.metadata, self.tenant, flight))
+            self.flights.append(Flight(self.metadata, self.tenant, flight, self.airports))
         self.min = min(self.flights, key=lambda x: x.sortval)
         self.max = max(self.flights, key=lambda x: x.sortval)
     

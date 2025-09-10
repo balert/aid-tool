@@ -116,6 +116,7 @@
                         <th>Landings</th>
                         <th>Airtime</th>
                         <th>PIC</th>
+                        <th>Night</th>
                         <th>Crew</th>
                         <th>Pax</th>
                         <th>Pricecat</th>
@@ -150,6 +151,7 @@
                         <td>{{ flight.landings }}</td>
                         <td title="Blocktime: {{ flight.blocktime }}">{{ flight.airtime }}</td>
                         <td>{{ "&#x1F7E2;" | safe if flight.isPIC() else "&#x1F534;" | safe }}</td>
+                        <td>{{ "&#x1F319;" | safe if flight.isNight() else "" | safe }}</td>
                         <td>{{ flight.getCrew() | join(", ") }}</td>
                         
                         {% if edit ==  flight.getID()  %}

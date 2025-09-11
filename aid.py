@@ -1,11 +1,12 @@
 import requests, json, logging
 from bs4 import BeautifulSoup
+import os 
 
 logger = logging.getLogger(__name__)
 
 class AID():
     def __init__(self, tenant, user, pw):
-        self.session_file = tenant + ".json"
+        self.session_file = "data/" + tenant + ".json"
         self.base_url = "https://www.aircraft-info.de/" + tenant
         self.user = user
         self.pw = pw
@@ -18,9 +19,11 @@ class AID():
         self.login()
 
     def save_session(self):
+        if not os.path.exists("data/"):
+            os.mkdir("data")
+            
         with open(self.session_file, 'w') as f:
             f.write(json.dumps({"cookies": self.cookies}))
-
 
     def login(self):
         # test if login required

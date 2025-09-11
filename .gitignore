@@ -1,4 +1,4 @@
-config.py
+config.json
 *.json
 venv/
 *.log
@@ -8,3 +8,4 @@ sampledata.txt
 *.dat
 graph-*.png
 build/
+graph/

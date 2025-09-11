@@ -27,34 +27,41 @@
     img {
       border: 0px solid red;
     }
+
+    .half-container {
+      width: 50%;
+      margin: 0 auto; /* centers horizontally */
+    }
   </style>
 </head>
 
 <body>
-  <table>
-    <tr>
-      <td>Flight ID</td>
-      <td>{{ flight.tenant }}-{{ flight.id }} </td>
-    </tr>
-    <tr>
-      <td>Route</td>
-      <td>{{ flight.departure }}-{{ flight.destination }} </td>
-    </tr>
-    <tr>
-      <td>Blocktime</td>
-      <td>{{ flight.blockoff }}-{{ flight.blockon }} </td>
-    </tr>
-    <tr>
-      <td>Airtime</td>
-      <td>{{ flight.takeoff }}-{{ flight.landing }} </td>
-    </tr>
-    <tr>
-      <td>Night</td>
-      <td>{{ flight.isNight() }} </td>
-    </tr>
-    <tr>
-      <td>Logbook Sums</td>
-      <td>{{ logbook }}</td>
-    </tr>
-  </table>
+  <main class="container-fluid">
+    <div class="half-container">
+      <h1><a href="/">Flight Details {{ flight.tenant }}-{{ flight.id }}</a></h1>
+      <table>
+        <tr>
+          <td>Route</td>
+          <td>{{ flight.departure }}-{{ flight.destination }} </td>
+        </tr>
+        <tr>
+          <td>Blocktime</td>
+          <td>{{ flight.blockoff }}-{{ flight.blockon }} </td>
+        </tr>
+        <tr>
+          <td>Airtime</td>
+          <td>{{ flight.takeoff }}-{{ flight.landing }} </td>
+        </tr>
+        <tr>
+          <td>Night</td>
+          <td>{{ flight.isNight() }} </td>
+        </tr>
+        <tr>
+          <td>Logbook Sums</td>
+          <td>{{ logbook }}</td>
+        </tr>
+      </table>
+    </div>
+  </main>
+
 </body>

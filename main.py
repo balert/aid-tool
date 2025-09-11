@@ -15,10 +15,10 @@ import pandas
 from typing import Optional, Union
 from pathlib import Path
 
-from config import *
 from aid import AID
 from flightlog import FlightLog, Metadata
 from airports import Airports
+from config import Config
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,7 +34,7 @@ notesfilename = "flightlog_merged_notes.dat"
 plt.style.use('fast')
 
 def refresh_data():
-    for tenant in tenants:
+    for tenant in Config.instance().getTenants():
         flightlog = FlightLog.file(tenant['name'])
         
         flights = flightlog.get_all()
@@ -80,7 +80,7 @@ def favicon():
 
 @app.get("/")
 async def root(request: Request, edit: Optional[str] = None):
-    flightlog = FlightLog.virtual(tenants)
+    flightlog = FlightLog.virtual(Config.instance().getTenants())
     
     stat = {}
     stat["blocktime"] = timedelta_toString(flightlog.get_blocktime())
@@ -131,14 +131,14 @@ async def root(request: Request, edit: Optional[str] = None):
         stat["avg_nighttimes"].append(nightaverage)
     
     return templates.TemplateResponse(
-        request=request, name="main.html", context={"flightlog": flightlog, "statistics": stat, "edit": edit, "airports": Airports.instance().airports, "home_airport": "Braunschweig Wolfsburg"}
+        request=request, name="main.html", context={"flightlog": flightlog, "statistics": stat, "edit": edit, "airports": Airports.instance().airports, "home_airport": Config.instance().get("home")}
     )
     
 @app.post("/submit")
 async def submit(request: Request, flightid: str = Form(), comment: str = Form(), pax: str = Form()):
     logger.info(f"{flightid}: {comment}")
     
-    flightlog = FlightLog.virtual(tenants)
+    flightlog = FlightLog.virtual(Config.instance().getTenants())
     Metadata.instance().add_metadata(flightid, "comment", comment)
     Metadata.instance().add_metadata(flightid, "pax", pax)
     
@@ -146,7 +146,7 @@ async def submit(request: Request, flightid: str = Form(), comment: str = Form()
     
 @app.get("/flight/{flight_id}")
 async def get_flight(request: Request, flight_id: str):
-    flightlog = FlightLog.virtual(tenants)
+    flightlog = FlightLog.virtual(Config.instance().getTenants())
     flight = flightlog.get_flight(flight_id)
     
     flightlog.cut(flight_id)
@@ -172,7 +172,9 @@ async def root(request: Request):
     return RedirectResponse(url="/")
 
 def graph_bar(keys : list, values : dict, title : str, xlabel : str = None, ylabel : str = None, stacked : bool = True, barwidth : float = 0.9, legend : bool = True, xdates : bool = False) -> Response:
-    filename = f"graph-{title.replace(' ', '-').replace('/', '-').lower()}.png"
+    filename = f"graph/graph-{title.replace(' ', '-').replace('/', '-').lower()}.png"
+    
+    logger.info(filename)
     
     if os.path.exists(filename):
         return FileResponse(filename)
@@ -224,6 +226,9 @@ def graph_bar(keys : list, values : dict, title : str, xlabel : str = None, ylab
     fig.savefig(buf, format='png')
     buf.seek(0) 
     
+    if not os.path.exists("graph"):
+        os.mkdir("graph")
+    
     with open(filename, 'wb') as file:
         file.write(buf.getbuffer())
 
@@ -234,7 +239,7 @@ def graph_bar(keys : list, values : dict, title : str, xlabel : str = None, ylab
 
 @app.get("/graph/blocktimes")
 async def get_graph_blocktimes(request: Request, aircraft : str = None):
-    flightlog = FlightLog.virtual(tenants)
+    flightlog = FlightLog.virtual(Config.instance().getTenants())
     if len(flightlog.flights) <=0:
         return FileResponse('static/under-construction.png', headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
@@ -260,7 +265,7 @@ async def get_graph_blocktimes(request: Request, aircraft : str = None):
 
 @app.get("/graph/other")
 async def get_graph_other(request: Request, stacked : bool = True):
-    flightlog = FlightLog.virtual(tenants)
+    flightlog = FlightLog.virtual(Config.instance().getTenants())
     if len(flightlog.flights) <=0:
         return FileResponse('static/under-construction.png', headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
@@ -287,7 +292,7 @@ async def get_graph_other(request: Request, stacked : bool = True):
 
 @app.get("/graph/bt_ac")
 async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
-    flightlog = FlightLog.virtual(tenants)
+    flightlog = FlightLog.virtual(Config.instance().getTenants())
     if len(flightlog.flights) <=0:
         return FileResponse('static/under-construction.png', headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
@@ -314,7 +319,7 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
 
 @app.get("/graph/bt_cs")
 async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
-    flightlog = FlightLog.virtual(tenants)
+    flightlog = FlightLog.virtual(Config.instance().getTenants())
     if len(flightlog.flights) <=0:
         return FileResponse('static/under-construction.png', headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
@@ -340,7 +345,7 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
 
 @app.get("/graph/airports")
 async def get_graph_airports(request: Request):
-    flightlog = FlightLog.virtual(tenants)
+    flightlog = FlightLog.virtual(Config.instance().getTenants())
     if len(flightlog.flights) <=0:
         return FileResponse('static/under-construction.png', headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
@@ -348,9 +353,8 @@ async def get_graph_airports(request: Request):
             "Expires": "0"})
     airports = flightlog.get_airports()
     airports = dict(sorted(airports.items(), key=lambda x: x[1], reverse=True))
-    logger.info(airports)
     return graph_bar(airports.keys(),{"a": airports.values()},"Airports", legend=False)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

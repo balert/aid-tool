@@ -2,11 +2,10 @@ import json, os, logging, datetime
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 import pandas
-import typing
 import re
-from astral.sun import Observer, sun
 
-from airports import Airports
+from flight import Flight
+from metadata import Metadata
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,131 +20,6 @@ class DateTimeEncoder(json.JSONEncoder):
         if isinstance(obj, datetime.datetime):
             return obj.isoformat()
         return super().default(obj)
-
-class Flight():
-    def __init__(self, tenant, data):
-        self.tenant = tenant
-        self.id = data['flightid']
-        self.sortval = data["flightdate"]["sortval"]
-        self.date = datetime.datetime.fromtimestamp(self.sortval)
-        self.actype = data['actype']
-        self.callsign = data['callsign']
-        self.crew = data['crew']
-        self.departure = data['departure']
-        self.destination = data['destination']
-        self.takeoff = data['takeoff']
-        self.landing = data['landing']
-        self.blockoff = data['blockoff']
-        self.blockon = data['blockon']
-        self.landings = data['landings']
-        self.airtime = data['airtime']
-        self.blocktime = data['blocktime']
-        self.pricecat = data['pricecat']
-    
-    def getID(self) -> str:
-        return str(f"{self.tenant}-{self.id}")
-
-    def isPIC(self) -> bool:
-        if self.getID() in ["ffg-1668", "ffg-3575", "ffg-5269"]:
-            return False
-        if self.getID() in ["ffg-4853", "ffg-4854", "ffg-4855"]:
-            return True
-    
-        # charter flights are always PIC
-        if not "charter" in self.pricecat.lower():
-            if "<b>Brenner</b>" in self.crew:
-                return True
-            if "Brenner" == self.crew:
-                return True
-            return False
-        return True
-    
-    def getCrew(self):
-        crew = FlightLog.remove_html_tags(self.crew)
-        crew = re.sub(r'[0-9]+', '', crew)
-        crew = crew.split("/")
-        crew = [x for x in crew if not "brenner" in x.lower()]
-        crew = [x.strip() for x in crew]
-        return crew or []
-    
-    def getPax(self):
-        pax = self.getMetadata("pax")
-        if not pax:
-            return []
-        return pax.split(",")
-    
-    def getComment(self) -> str:
-        return self.getMetadata("comment") or ""
-    
-    def getPricecat(self) -> str:
-        return {
-            "Charterflug": "Charter",
-            "Schulungsflug": "Schulung",
-            "Check-/Einweisungs-/&Uuml;bungsflug": "Check/Einw.",
-            "Charterflug mit Kurzfristbuchungsrabatt": "Kurzfristrabatt" 
-        }.get(self.pricecat, self.pricecat)
-        
-    def getMetadata(self, attr: str):
-        meta = Metadata.instance().get_metadata(self.getID())
-        if meta and attr in meta:
-            return meta[attr]
-        return None
-    
-    def getBlocktime(self) -> datetime.timedelta:
-        (hours, minutes) = self.blocktime.split(":")
-        return datetime.timedelta(hours=int(hours), minutes=int(minutes))
-    
-    def isNight(self) -> str:
-        departure = Airports.instance().airports[self.departure]
-        destination = Airports.instance().airports[self.destination]
-        sun_dep = sun(Observer(departure['lat'], departure['lon'], departure['elevation']/3.28084), self.date)
-        sun_dest = sun(Observer(destination['lat'], destination['lon'], destination['elevation']/3.28084), self.date)
-        
-        blockoff = datetime.datetime.strptime(self.blockoff, "%H:%M").replace(year=self.date.year,month=self.date.month,day=self.date.day,tzinfo=datetime.timezone.utc)
-        blockon = datetime.datetime.strptime(self.blockon, "%H:%M").replace(year=self.date.year,month=self.date.month,day=self.date.day,tzinfo=datetime.timezone.utc)
-
-        if blockoff > sun_dep['dusk'] and blockon > sun_dest['dusk']:
-            return True
-        return False
-
-class Metadata(object):
-    _instance = None 
-    
-    def __init__(self):
-        raise RuntimeError('Call instance() instead')
-    
-    @classmethod 
-    def instance(cls):
-        if cls._instance is None:
-            cls._instance = cls.__new__(cls)
-            cls._instance.load_metadata()   
-        return cls._instance
-    
-    def load_metadata(self):
-        self.metafilename = "metadata.dat"
-        if os.path.exists(self.metafilename):
-            with open(self.metafilename, "r") as f:
-                file_contents = f.read()
-                if len(file_contents) > 0:
-                    self.metadata = json.loads(file_contents)
-                    logger.info("metadata loaded.")
-                    return
-        self.metadata = defaultdict()
-    
-    def add_metadata(self, flightid: str, attribute: str, value: str):
-        if not flightid in self.metadata:
-            self.metadata[flightid] = dict()
-        self.metadata[flightid][attribute] = value
-        self.write_metadata()
-        
-    def get_metadata(self, flightid: str):
-        if not flightid in self.metadata:
-            return None
-        return self.metadata[flightid]
-        
-    def write_metadata(self):
-        with open(self.metafilename, "w") as f:
-            f.write(json.dumps(self.metadata))
 
 class FlightLog:
     acc_blocktime = None 
@@ -187,7 +61,7 @@ class FlightLog:
         self.flights = [f for f in self.flights if f.sortval <= sortval]
     
     def load_tenant(self):
-        self.filename = 'flightlog_%s.dat' % self.tenant
+        self.filename = 'data/flightlog_%s.dat' % self.tenant
         if os.path.exists(self.filename):
             with open(self.filename, "r") as f:
                 file_contents = f.read()
@@ -220,11 +94,12 @@ class FlightLog:
     def write(self):
         if not hasattr(self, "data"):
             return
+        if not os.path.exists("data/"):
+            os.mkdir("data")
         with open(self.filename, "w") as f:
             f.write(json.dumps(self.data, cls=DateTimeEncoder))
     
     def get_flight(self, flight_id: str):
-        logger.info(flight_id)
         flight = next((f for f in self.flights if f.getID() == flight_id), None)
         return flight
     
@@ -289,9 +164,6 @@ class FlightLog:
             self.landings_nightpic = sum(int(l.landings) for l in self.flights if l.isNight() and l.isPIC())
             
         return (self.landings, self.landings_pic, self.landings_night, self.landings_nightpic)
-    
-    def remove_html_tags(text):
-        return re.sub(r'<[^>]*>', '', text)
     
     def get_flights_groupedby_person(self):
         grouped = defaultdict(list)

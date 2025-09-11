@@ -4,6 +4,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import math
 from fastapi import FastAPI, Request, Response, Form
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import matplotlib.pyplot as plt
@@ -13,6 +14,7 @@ from collections import defaultdict
 import pandas
 from typing import Optional, Union
 from pathlib import Path
+import uvicorn
 
 from config import *
 from aid import AID
@@ -70,7 +72,12 @@ def timedelta_toString(delta : datetime.timedelta) -> str:
     return f"{hours:02d}:{minutes:02d}"
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+@app.get("/favicon.ico")
+def favicon():
+    return FileResponse("static/favicon.ico")
 
 @app.get("/")
 async def root(request: Request, edit: Optional[str] = None):
@@ -316,3 +323,6 @@ async def get_graph_airports(request: Request):
     airports = dict(sorted(airports.items(), key=lambda x: x[1], reverse=True))
     logger.info(airports)
     return graph_bar(airports.keys(),{"a": airports.values()},"Airports", legend=False)
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

@@ -102,6 +102,7 @@
                 <img src="/graph/bt_ac?pic=1" style="max-width: 100%; height: auto;">
                 <img src="/graph/other" style="max-width: 100%; height: auto;">
                 <img src="/graph/bt_cs" style="max-width: 100%; height: auto;">
+                <img src="/graph/airports" style="max-width: 100%; height: auto;">
                 </section>
             </div>
             <div class="column-right" style="padding: 1rem;">
@@ -140,8 +141,14 @@
                         </td>
 
                         <td>{{ flight.actype }} ({{ flight.callsign }})</td>
-                        <td title="{{ flight.departure }}">{{ airports[flight.departure]["name"] | replace("Airport", "" )}}</td>
-                        <td title="{{ flight.destination }}">{{ airports[flight.destination]["name"] | replace("Airport", "" )}}</td>
+                        <td title="{{ flight.departure }}">{{ airports[flight.departure]["name"] 
+                            | replace("Airport", "" ) 
+                            | replace(home_airport, "&#x1F3E0;") 
+                            | safe}}</td>
+                        <td title="{{ flight.destination }}">{{ airports[flight.destination]["name"]
+                            | replace("Airport", "" )
+                            | replace(home_airport, "&#x1F3E0;") 
+                            | safe}}</td>
                         {% if edit ==  flight.getID()  %}
                         <td class="comment"><input type="text" id="comment" name="comment" value="{{ flight.getComment() }}"></td>
                         {% else %}

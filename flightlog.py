@@ -346,3 +346,17 @@ class FlightLog:
         for flight in self.flights:
             aircraft.add(flight.callsign)
         return sorted(aircraft)
+    
+    def get_airports(self):
+        airports = dict()
+        for flight in self.flights:
+            if not flight.departure in airports:
+                airports[flight.departure] = 0
+            airports[flight.departure] += 1
+            
+            if not flight.departure == flight.destination:
+                if not flight.destination in airports:
+                    airports[flight.destination] = 0
+                airports[flight.destination] += 1
+        return airports
+            

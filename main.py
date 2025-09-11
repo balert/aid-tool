@@ -122,7 +122,7 @@ async def root(request: Request, edit: Optional[str] = None):
         stat["avg_nighttimes"].append(nightaverage)
     
     return templates.TemplateResponse(
-        request=request, name="main.html", context={"flightlog": flightlog, "statistics": stat, "edit": edit, "airports": Airports.instance().airports}
+        request=request, name="main.html", context={"flightlog": flightlog, "statistics": stat, "edit": edit, "airports": Airports.instance().airports, "home_airport": "Braunschweig Wolfsburg"}
     )
     
 @app.post("/submit")
@@ -162,7 +162,7 @@ async def root(request: Request):
         p.unlink()
     return RedirectResponse(url="/")
 
-def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = None, ylabel : str = None, stacked : bool = True, barwidth : float = 0.9, legend : bool = True, xdates : bool = False) -> Response:
+def graph_bar(keys : list, values : dict, title : str, xlabel : str = None, ylabel : str = None, stacked : bool = True, barwidth : float = 0.9, legend : bool = True, xdates : bool = False) -> Response:
     filename = f"graph-{title.replace(' ', '-').replace('/', '-').lower()}.png"
     
     if os.path.exists(filename):
@@ -205,10 +205,10 @@ def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = Non
         
     ax.set_ylim(top=math.ceil(max(ax.get_ylim())/0.8))
 
-    # plt.xticks(rotation=90)
-    plt.setp(ax.xaxis.get_minorticklabels(), rotation=90)
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=90)
     if legend:
+        # plt.xticks(rotation=90)
+        plt.setp(ax.xaxis.get_minorticklabels(), rotation=90)
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=90)
         fig.legend(loc="upper left", bbox_to_anchor=(0.05, 0.95))
 
     buf = io.BytesIO()
@@ -308,3 +308,11 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
     
     all_months = [f"{month.year}-{month.month:02d}" for month in all_months]
     return graph_bar(all_months, data, title="Blocktimes by Callsign", xlabel="Date", ylabel="Blocktime [h]", xdates=True)
+
+@app.get("/graph/airports")
+async def get_graph_airports(request: Request):
+    flightlog = FlightLog.virtual(tenants)
+    airports = flightlog.get_airports()
+    airports = dict(sorted(airports.items(), key=lambda x: x[1], reverse=True))
+    logger.info(airports)
+    return graph_bar(airports.keys(),{"a": airports.values()},"Airports", legend=False)

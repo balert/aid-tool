@@ -6,6 +6,8 @@ import typing
 import re
 from astral.sun import Observer, sun
 
+from airports import Airports
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -21,8 +23,7 @@ class DateTimeEncoder(json.JSONEncoder):
         return super().default(obj)
 
 class Flight():
-    def __init__(self, metadata, tenant, data, airports):
-        self.metadata = metadata
+    def __init__(self, tenant, data):
         self.tenant = tenant
         self.id = data['flightid']
         self.sortval = data["flightdate"]["sortval"]
@@ -40,7 +41,6 @@ class Flight():
         self.airtime = data['airtime']
         self.blocktime = data['blocktime']
         self.pricecat = data['pricecat']
-        self.airports = airports
     
     def getID(self) -> str:
         return str(f"{self.tenant}-{self.id}")
@@ -86,7 +86,7 @@ class Flight():
         }.get(self.pricecat, self.pricecat)
         
     def getMetadata(self, attr: str):
-        meta = self.metadata.get_metadata(self.getID())
+        meta = Metadata.instance().get_metadata(self.getID())
         if meta and attr in meta:
             return meta[attr]
         return None
@@ -96,8 +96,8 @@ class Flight():
         return datetime.timedelta(hours=int(hours), minutes=int(minutes))
     
     def isNight(self) -> str:
-        departure = self.airports[self.departure]
-        destination = self.airports[self.destination]
+        departure = Airports.instance().airports[self.departure]
+        destination = Airports.instance().airports[self.destination]
         sun_dep = sun(Observer(departure['lat'], departure['lon'], departure['elevation']/3.28084), self.date)
         sun_dest = sun(Observer(destination['lat'], destination['lon'], destination['elevation']/3.28084), self.date)
         
@@ -108,9 +108,18 @@ class Flight():
             return True
         return False
 
-class Metadata:
+class Metadata(object):
+    _instance = None 
+    
     def __init__(self):
-        self.load_metadata()    
+        raise RuntimeError('Call instance() instead')
+    
+    @classmethod 
+    def instance(cls):
+        if cls._instance is None:
+            cls._instance = cls.__new__(cls)
+            cls._instance.load_metadata()   
+        return cls._instance
     
     def load_metadata(self):
         self.metafilename = "metadata.dat"
@@ -149,27 +158,20 @@ class FlightLog:
     landings_nightpic = None
     flights = list()
 
-    def virtual(tenants, metadata, airports):
+    def virtual(tenants):
         flightlog = FlightLog()
-        flightlog.metadata = metadata
-        flightlog.airports = airports
         for t in tenants:
-            tenant = FlightLog.file(t["name"], metadata, airports)
-            flightlog.virtual_insert(tenant.get_all())
+            tenant = FlightLog.file(t["name"])
+            for flight in tenant.get_all():
+                if not any(flight.getID() == f.getID() for f in flightlog.flights):
+                    flightlog.flights.append(flight)
+                flightlog.flights.sort(key=lambda x: x.sortval, reverse=True)
+                flightlog.min = min(flightlog.flights, key=lambda x: x.sortval)
+                flightlog.max = max(flightlog.flights, key=lambda x: x.sortval)
         return flightlog 
     
-    def virtual_insert(self, flights):
-        for flight in flights:
-            if not any(flight.getID() == f.getID() for f in self.flights):
-                self.flights.append(flight)
-        self.flights.sort(key=lambda x: x.sortval, reverse=True)
-        self.min = min(self.flights, key=lambda x: x.sortval)
-        self.max = max(self.flights, key=lambda x: x.sortval)
-    
-    def file(tenant: str, metadata, airports):
+    def file(tenant: str):
         flightlog = FlightLog()
-        flightlog.metadata = metadata
-        flightlog.airports = airports
         flightlog.tenant = tenant
         flightlog.load_tenant()
         return flightlog
@@ -179,6 +181,10 @@ class FlightLog:
         base = f"File <{tenant}>" if self.tenant else "Virtual"
         noflights = len(self.flights)
         return f"Flightlog {base}, {noflights} flights."
+    
+    def cut(self, flight_id: str):
+        sortval = self.get_flight(flight_id).sortval
+        self.flights = [f for f in self.flights if f.sortval <= sortval]
     
     def load_tenant(self):
         self.filename = 'flightlog_%s.dat' % self.tenant
@@ -194,7 +200,7 @@ class FlightLog:
     def process(self):
         self.flights = []
         for flight in self.data:
-            self.flights.append(Flight(self.metadata, self.tenant, flight, self.airports))
+            self.flights.append(Flight(self.tenant, flight))
         self.min = min(self.flights, key=lambda x: x.sortval)
         self.max = max(self.flights, key=lambda x: x.sortval)
     
@@ -234,6 +240,9 @@ class FlightLog:
                 delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
                 self.acc_blocktime += delta
         return self.acc_blocktime
+    
+    def get_blocktime_dual(self) -> datetime.timedelta:
+        return self.get_blocktime() - self.get_blocktime_pic()
     
     def get_blocktime_pic(self) -> datetime.timedelta: 
         if not self.acc_blocktime_pic:

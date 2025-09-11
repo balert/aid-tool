@@ -17,7 +17,7 @@ from pathlib import Path
 from config import *
 from aid import AID
 from flightlog import FlightLog, Metadata
-from notes import Notes
+from airports import Airports
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,14 +32,9 @@ notesfilename = "flightlog_merged_notes.dat"
 # plt.style.use('Solarize_Light2')
 plt.style.use('fast')
 
-import airportsdata
-airports = airportsdata.load()
-
-metadata = Metadata()
-
 def refresh_data():
     for tenant in tenants:
-        flightlog = FlightLog.file(tenant['name'], metadata, airports)
+        flightlog = FlightLog.file(tenant['name'])
         
         flights = flightlog.get_all()
         if len(flights) > 0:
@@ -67,14 +62,6 @@ def flight_toString(flight, notes=""):
     date = datetime.datetime.fromtimestamp(flight.sortval, datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S') 
     crew = re.sub(r'<[^>]+>', '', flight.crew)
     return "%s %s [%s>>>%s] (%s) [%10s #%s] %25s | %s" % (flight.callsign, date, flight.departure, flight.destination, flight.airtime, flight.tenant, flight.flightid, crew, notes.strip())
-
-def display_data(tenant=None):
-    if tenant == None:
-        tenant = "merged"
-
-    notes = Notes(notesfilename)
-    for flight in FlightLog(tenant, metadata).get():
-        print(flight_toString(flight, notes.get(flight_notesId(flight))))
     
 def timedelta_toString(delta : datetime.timedelta) -> str:
     total_minutes = int(delta.total_seconds() // 60)
@@ -87,7 +74,7 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
 async def root(request: Request, edit: Optional[str] = None):
-    flightlog = FlightLog.virtual(tenants, metadata, airports)
+    flightlog = FlightLog.virtual(tenants)
     
     stat = {}
     stat["blocktime"] = timedelta_toString(flightlog.get_blocktime())
@@ -135,25 +122,36 @@ async def root(request: Request, edit: Optional[str] = None):
         stat["avg_nighttimes"].append(nightaverage)
     
     return templates.TemplateResponse(
-        request=request, name="main.html", context={"flightlog": flightlog, "statistics": stat, "edit": edit, "airports": airports}
+        request=request, name="main.html", context={"flightlog": flightlog, "statistics": stat, "edit": edit, "airports": Airports.instance().airports}
     )
     
 @app.post("/submit")
 async def submit(request: Request, flightid: str = Form(), comment: str = Form(), pax: str = Form()):
     logger.info(f"{flightid}: {comment}")
     
-    flightlog = FlightLog.virtual(tenants, metadata, airports)
-    flightlog.metadata.add_metadata(flightid, "comment", comment)
-    flightlog.metadata.add_metadata(flightid, "pax", pax)
+    flightlog = FlightLog.virtual(tenants)
+    Metadata.instance().add_metadata(flightid, "comment", comment)
+    Metadata.instance().add_metadata(flightid, "pax", pax)
     
     return RedirectResponse(url="/", status_code=303)
     
 @app.get("/flight/{flight_id}")
 async def get_flight(request: Request, flight_id: str):
-    flightlog = FlightLog.virtual(tenants, metadata, airports)
+    flightlog = FlightLog.virtual(tenants)
     flight = flightlog.get_flight(flight_id)
+    
+    flightlog.cut(flight_id)
+    
+    blocktime = timedelta_toString(flightlog.get_blocktime())
+    ldg = flightlog.get_landings()
+    blocktime_night = timedelta_toString(flightlog.get_blocktime_night())
+    blocktime_pic = timedelta_toString(flightlog.get_blocktime_pic())
+    blocktime_dual = timedelta_toString(flightlog.get_blocktime_dual())
+    
+    logbook = f"Blockzeit: {blocktime} | Landungen: {ldg[0]} (Tag: {ldg[0]-ldg[2]} / Nacht: {ldg[2]}) | Nacht: {blocktime_night} | PIC: {blocktime_pic} | Dual: {blocktime_dual}"
+    
     return templates.TemplateResponse(
-        request=request, name="flight.html", context={"flight": flight}
+        request=request, name="flight.html", context={"flight": flight, "logbook": logbook}
     )
 
 @app.get("/refresh")
@@ -227,7 +225,7 @@ def graph_bar(keys : list, values : dict, title : str = None, xlabel : str = Non
 
 @app.get("/graph/blocktimes")
 async def get_graph_blocktimes(request: Request, aircraft : str = None):
-    flightlog = FlightLog.virtual(tenants, metadata, airports)
+    flightlog = FlightLog.virtual(tenants)
     (_, grouped) = flightlog.get_flights_groupedby_month(aircraft)
     
     # accumulate blocktimes
@@ -248,7 +246,7 @@ async def get_graph_blocktimes(request: Request, aircraft : str = None):
 
 @app.get("/graph/other")
 async def get_graph_other(request: Request, stacked : bool = True):
-    flightlog = FlightLog.virtual(tenants, metadata, airports)
+    flightlog = FlightLog.virtual(tenants)
     grouped = flightlog.get_flights_groupedby_person()
 
     blocktimes = defaultdict()
@@ -270,7 +268,7 @@ async def get_graph_other(request: Request, stacked : bool = True):
 
 @app.get("/graph/bt_ac")
 async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
-    flightlog = FlightLog.virtual(tenants, metadata, airports)
+    flightlog = FlightLog.virtual(tenants)
     aircrafts = flightlog.get_aircraft_types()
     (all_months, grouped) = flightlog.get_flights_groupedby_month(f_pic=pic)
     
@@ -292,7 +290,7 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
 
 @app.get("/graph/bt_cs")
 async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
-    flightlog = FlightLog.virtual(tenants, metadata, airports)
+    flightlog = FlightLog.virtual(tenants)
     aircrafts = flightlog.get_callsigns()
     (all_months, grouped) = flightlog.get_flights_groupedby_month(f_pic=pic)
     

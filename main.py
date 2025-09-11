@@ -94,8 +94,11 @@ async def root(request: Request, edit: Optional[str] = None):
     stat["noflights"] = len(flightlog.get_all())
     
     now = datetime.datetime.now()
-    max_delta = relativedelta(now, flightlog.min.date)
-    alltime = max_delta.years*12+max_delta.months+1
+    if len(flightlog.flights) > 0:
+        max_delta = relativedelta(now, flightlog.min.date)
+        alltime = max_delta.years*12+max_delta.months+1
+    else: 
+        alltime = 1
 
     stat["avg_blocktimes"] = list()
     stat["avg_pictimes"] = list()
@@ -233,6 +236,11 @@ def graph_bar(keys : list, values : dict, title : str, xlabel : str = None, ylab
 @app.get("/graph/blocktimes")
 async def get_graph_blocktimes(request: Request, aircraft : str = None):
     flightlog = FlightLog.virtual(tenants)
+    if len(flightlog.flights) <=0:
+        return FileResponse('static/under-construction.png', headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"})
     (_, grouped) = flightlog.get_flights_groupedby_month(aircraft)
     
     # accumulate blocktimes
@@ -254,6 +262,11 @@ async def get_graph_blocktimes(request: Request, aircraft : str = None):
 @app.get("/graph/other")
 async def get_graph_other(request: Request, stacked : bool = True):
     flightlog = FlightLog.virtual(tenants)
+    if len(flightlog.flights) <=0:
+        return FileResponse('static/under-construction.png', headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"})
     grouped = flightlog.get_flights_groupedby_person()
 
     blocktimes = defaultdict()
@@ -276,6 +289,11 @@ async def get_graph_other(request: Request, stacked : bool = True):
 @app.get("/graph/bt_ac")
 async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
     flightlog = FlightLog.virtual(tenants)
+    if len(flightlog.flights) <=0:
+        return FileResponse('static/under-construction.png', headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"})
     aircrafts = flightlog.get_aircraft_types()
     (all_months, grouped) = flightlog.get_flights_groupedby_month(f_pic=pic)
     
@@ -298,6 +316,11 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
 @app.get("/graph/bt_cs")
 async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
     flightlog = FlightLog.virtual(tenants)
+    if len(flightlog.flights) <=0:
+        return FileResponse('static/under-construction.png', headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"})
     aircrafts = flightlog.get_callsigns()
     (all_months, grouped) = flightlog.get_flights_groupedby_month(f_pic=pic)
     
@@ -319,6 +342,11 @@ async def get_graph_blocktimes(request: Request, pic: Optional[bool] = None):
 @app.get("/graph/airports")
 async def get_graph_airports(request: Request):
     flightlog = FlightLog.virtual(tenants)
+    if len(flightlog.flights) <=0:
+        return FileResponse('static/under-construction.png', headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"})
     airports = flightlog.get_airports()
     airports = dict(sorted(airports.items(), key=lambda x: x[1], reverse=True))
     logger.info(airports)

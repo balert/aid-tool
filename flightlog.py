@@ -323,6 +323,8 @@ class FlightLog:
         
         daterange = pandas.date_range(start=self.min.date.replace(day=1), end=self.max.date+relativedelta(months=1), freq='MS', inclusive="both")
         all_months = daterange.to_period('M')
+        
+        # fill gaps -> defaultdict
         for month in all_months:
             len(grouped[month.year,month.month])
             

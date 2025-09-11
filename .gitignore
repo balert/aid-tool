@@ -7,3 +7,4 @@ __pycache__/
 sampledata.txt
 *.dat
 graph-*.png
+build/

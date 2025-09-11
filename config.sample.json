@@ -1,0 +1,16 @@
+{
+    "tenants": [
+        {
+            "name": "ffg", // as in https://www.aircraft-info.de/<<tenant>>
+            "username": "username",
+            "password": "secret"
+        },
+        {
+            "name": "flycademy", // as in https://www.aircraft-info.de/<<tenant>>
+            "username": "username",
+            "password": "secret"
+        }
+    ],
+    "home": "Braunschweig Wolfsburg",
+    "myself": "Lastname"
+}

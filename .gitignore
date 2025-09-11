@@ -1,5 +1,4 @@
 config.json
-*.json
 venv/
 *.log
 __pycache__/
@@ -9,3 +8,4 @@ sampledata.txt
 graph-*.png
 build/
 graph/
+data/

@@ -11,8 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import io
 from collections import defaultdict
-import pandas
-from typing import Optional, Union
+from typing import Optional
 from pathlib import Path
 
 from aid import AID
@@ -357,4 +356,4 @@ async def get_graph_airports(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)

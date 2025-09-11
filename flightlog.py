@@ -141,8 +141,12 @@ class Metadata:
 class FlightLog:
     acc_blocktime = None 
     acc_blocktime_pic = None 
+    acc_blocktime_night = None
     acc_airtime = None 
     landings = None
+    landings_pic = None
+    landings_night = None
+    landings_nightpic = None
     flights = list()
 
     def virtual(tenants, metadata, airports):
@@ -241,6 +245,17 @@ class FlightLog:
                 delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
                 self.acc_blocktime_pic += delta
         return self.acc_blocktime_pic
+    
+    def get_blocktime_night(self) -> datetime.timedelta: 
+        if not self.acc_blocktime_night:
+            self.acc_blocktime_night = datetime.timedelta(0)
+            for flight in self.flights:
+                if not flight.isNight():
+                    continue
+                blocktime = datetime.datetime.strptime(flight.blocktime, "%H:%M")
+                delta = datetime.timedelta(hours=blocktime.hour, minutes=blocktime.minute)
+                self.acc_blocktime_night += delta
+        return self.acc_blocktime_night
 
     def get_airtime(self) -> datetime.timedelta:
         if not self.acc_airtime:
@@ -254,7 +269,17 @@ class FlightLog:
     def get_landings(self) -> int:
         if not self.landings:
             self.landings = sum(int(l.landings) for l in self.flights)
-        return self.landings
+            
+        if not self.landings_pic:
+            self.landings_pic = sum(int(l.landings) for l in self.flights if l.isPIC())
+        
+        if not self.landings_night:
+            self.landings_night = sum(int(l.landings) for l in self.flights if l.isNight())
+        
+        if not self.landings_nightpic:
+            self.landings_nightpic = sum(int(l.landings) for l in self.flights if l.isNight() and l.isPIC())
+            
+        return (self.landings, self.landings_pic, self.landings_night, self.landings_nightpic)
     
     def remove_html_tags(text):
         return re.sub(r'<[^>]*>', '', text)

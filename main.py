@@ -93,8 +93,9 @@ async def root(request: Request, edit: Optional[str] = None):
     stat["blocktime"] = timedelta_toString(flightlog.get_blocktime())
     stat["blocktime_pic"] = timedelta_toString(flightlog.get_blocktime_pic())
     stat["blocktime_dual"] = timedelta_toString(flightlog.get_blocktime() - flightlog.get_blocktime_pic())
+    stat["blocktime_night"] = timedelta_toString(flightlog.get_blocktime_night())
     stat["airtime"] = timedelta_toString(flightlog.get_airtime())
-    stat["landings"] = f"{flightlog.get_landings()}"
+    stat["landings"] = flightlog.get_landings()
     stat["aircraft"] = ", ".join(flightlog.get_aircraft_types())
     stat["noflights"] = len(flightlog.get_all())
     
@@ -105,6 +106,7 @@ async def root(request: Request, edit: Optional[str] = None):
     stat["avg_blocktimes"] = list()
     stat["avg_pictimes"] = list()
     stat["avg_dualtimes"] = list()
+    stat["avg_nighttimes"] = list()
     
     for x in [alltime,12,6,3,1]:
         from_date = now - relativedelta(months=x)
@@ -112,20 +114,25 @@ async def root(request: Request, edit: Optional[str] = None):
         time = datetime.timedelta(0)
         pictime = datetime.timedelta(0)
         dualtime = datetime.timedelta(0)
+        nighttime = datetime.timedelta(0)
         for flight in flights:
             time += flight.getBlocktime()
             if flight.isPIC():
                 pictime += flight.getBlocktime()
             if not flight.isPIC():
                 dualtime += flight.getBlocktime()
+            if flight.isNight():
+                nighttime += flight.getBlocktime()
                 
         average = f"{int(time.total_seconds()/x//3600)}:{int(time.total_seconds()/x%3600//60):02d}"
         picaverage = f"{int(pictime.total_seconds()/x//3600)}:{int(pictime.total_seconds()/x%3600//60):02d}"
         dualaverage = f"{int(dualtime.total_seconds()/x//3600)}:{int(dualtime.total_seconds()/x%3600//60):02d}"
+        nightaverage = f"{int(nighttime.total_seconds()/x//3600)}:{int(nighttime.total_seconds()/x%3600//60):02d}"
         
         stat["avg_blocktimes"].append(average)
         stat["avg_pictimes"].append(picaverage)
         stat["avg_dualtimes"].append(dualaverage)
+        stat["avg_nighttimes"].append(nightaverage)
     
     return templates.TemplateResponse(
         request=request, name="main.html", context={"flightlog": flightlog, "statistics": stat, "edit": edit, "airports": airports}

@@ -93,8 +93,9 @@
                     <li title="all time: {{ statistics['avg_blocktimes'][0] }}h | 12 months: {{ statistics['avg_blocktimes'][1] }}h | 6 months: {{ statistics['avg_blocktimes'][2] }}h | 3 months: {{ statistics['avg_blocktimes'][3] }}h | 1 month: {{ statistics['avg_blocktimes'][4] }}h">Blocktime: {{ statistics["blocktime"] }}h (12 month average: {{ statistics['avg_blocktimes'][1] }}h)</li>
                     <li title="all time: {{ statistics['avg_pictimes'][0] }}h | 12 months: {{ statistics['avg_pictimes'][1] }}h | 6 months: {{ statistics['avg_pictimes'][2] }}h | 3 months: {{ statistics['avg_pictimes'][3] }}h | 1 month: {{ statistics['avg_pictimes'][4] }}h">Blocktime (PIC): {{ statistics["blocktime_pic"] }}h (12 month average: {{ statistics['avg_pictimes'][1] }}h)</li>
                     <li title="all time: {{ statistics['avg_dualtimes'][0] }}h | 12 months: {{ statistics['avg_dualtimes'][1] }}h | 6 months: {{ statistics['avg_dualtimes'][2] }}h | 3 months: {{ statistics['avg_dualtimes'][3] }}h | 1 month: {{ statistics['avg_dualtimes'][4] }}h)">Blocktime (Dual): {{ statistics["blocktime_dual"] }}h (12 month average: {{ statistics['avg_dualtimes'][1] }}h)</li>
+                    <li title="all time: {{ statistics['avg_nighttimes'][0] }}h | 12 months: {{ statistics['avg_nighttimes'][1] }}h | 6 months: {{ statistics['avg_nighttimes'][2] }}h | 3 months: {{ statistics['avg_nighttimes'][3] }}h | 1 month: {{ statistics['avg_nighttimes'][4] }}h)">Blocktime (Night): {{ statistics["blocktime_night"] }}h (12 month average: {{ statistics['avg_nighttimes'][1] }}h)</li>
                     <li>Airtime: {{ statistics["airtime"] }}h</li>
-                    <li>Landings: {{ statistics["landings"] }}</li>
+                    <li title="all {{ statistics['landings'][0] }} | PIC {{ statistics['landings'][1] }} | Night {{ statistics['landings'][2] }} | Night PIC {{ statistics['landings'][3] }}">Landings: {{ statistics["landings"][0] }}</li>
                     <li>Aircraft: {{ statistics["aircraft"] }}</li>
                 </ul>
                 <img src="/graph/bt_ac" style="max-width: 100%; height: auto;">

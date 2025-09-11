@@ -14,7 +14,6 @@ from collections import defaultdict
 import pandas
 from typing import Optional, Union
 from pathlib import Path
-import uvicorn
 
 from config import *
 from aid import AID
@@ -353,4 +352,5 @@ async def get_graph_airports(request: Request):
     return graph_bar(airports.keys(),{"a": airports.values()},"Airports", legend=False)
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)

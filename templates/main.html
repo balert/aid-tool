@@ -117,11 +117,11 @@
                         <th>Landing</th>
                         <th>Landings</th>
                         <th>Airtime</th>
-                        <th>PIC</th>
-                        <th>Night</th>
+                        <th colspan="2">Attributes</th>
                         <th>Crew</th>
                         <th>Pax</th>
                         <th>Pricecat</th>
+                        <th>Edit</th>
                     </tr>
                     {% for flight in flightlog.get_all() %}
                     <tr class="{{ 'even-row' if loop.index is even else 'odd-row' }}">
@@ -152,25 +152,26 @@
                         {% if edit ==  flight.getID()  %}
                         <td class="comment"><input type="text" id="comment" name="comment" value="{{ flight.getComment() }}"></td>
                         {% else %}
-                        <td class="comment" title="{{ flight.getComment() }}">{{ flight.getComment()[:32] }}<a href="?edit={{ flight.getID() }}#editrow">✏️</a></td>
+                        <td class="comment" title="{{ flight.getComment() }}">{{ flight.getComment()[:32] }}</td>
                         {%endif%} 
                         <td title="Block off: {{ flight.blockoff }}">{{ flight.takeoff }}</td>
                         <td title="Block on: {{ flight.blockon }}">{{ flight.landing }}</td>
                         <td>{{ flight.landings }}</td>
                         <td title="Blocktime: {{ flight.blocktime }}">{{ flight.airtime }}</td>
-                        <td>{{ "&#x1F7E2;" | safe if flight.isPIC() else "&#x1F534;" | safe }}</td>
+                        <td>{{ "<span title='PIC'>&#11088;</span>" | safe if flight.isPIC() else "<span title='Dual'>&#128216;</span>" | safe }}</td>
                         <td>{{ "&#x1F319;" | safe if flight.isNight() else "" | safe }}</td>
                         <td>{{ flight.getCrew() | join(", ") }}</td>
                         
                         {% if edit ==  flight.getID()  %}
                         <td><input type="text" id="pax" name="pax" value="{{ flight.getPax() | join(", ") }}"></td>
                         {% else %}
-                        <td>{{ flight.getPax() | join(", ") }}<a href="?edit={{ flight.getID() }}#editrow">✏️</a></td>
+                        <td>{{ flight.getPax() | join(", ") }}</td>
                         {%endif%} 
                         <td>{{ flight.getPricecat() }}</td>
                         {% if edit ==  flight.getID()  %}
                         </form>
                         {%endif%}
+                        <td><a href="?edit={{ flight.getID() }}#editrow">✏️</a></td>
                     </tr>
                     {% endfor %}
                 </table>
